@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  
+  --color-deep-blue: #113550;
+  --color-lime-ia: #83c501;
+  --color-cloud-gray: #e7efef;
+  --color-pure-white: #ffffff;
+  
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+}
+
+@layer base {
+  body {
+    @apply bg-cloud-gray text-deep-blue/90 font-sans antialiased text-[14px];
+  }
+  
+  h1 {
+    @apply font-display text-[24px] font-bold tracking-[-0.02em] text-deep-blue;
+  }
+
+  h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-deep-blue;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply bg-pure-white border border-deep-blue/5 rounded-[12px] shadow-sm transition-all duration-300;
+  }
+  
+  .ai-glow {
+    @apply border border-lime-ia/20;
+  }
+  
+  .ai-glow:hover {
+    @apply border-lime-ia/40 shadow-md scale-[1.01];
+  }
+  
+  .btn-primary {
+    @apply bg-lime-ia text-deep-blue font-display text-[13px] font-medium py-1.5 px-4 rounded-[6px] hover:brightness-110 transition-all active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-pure-white border border-deep-blue text-deep-blue font-display text-[13px] font-medium py-1.5 px-4 rounded-[6px] hover:bg-deep-blue/5 transition-all active:scale-95;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:text-lime-ia hover:bg-white/5 transition-all font-display text-[13px] font-medium;
+  }
+
+  .sidebar-link-active {
+    @apply text-lime-ia bg-white/5 border-r-2 border-lime-ia;
+  }
+
+  /* Markdown Body Styling */
+  .markdown-body {
+    @apply text-deep-blue leading-relaxed;
+  }
+
+  .markdown-body p {
+    @apply mb-4 last:mb-0;
+  }
+
+  .markdown-body strong {
+    @apply text-lime-ia font-bold;
+  }
+
+  .markdown-body ol {
+    @apply list-decimal pl-6 mb-4 space-y-2;
+  }
+
+  .markdown-body ul {
+    @apply list-disc pl-6 mb-4 space-y-2;
+  }
+
+  .markdown-body li {
+    @apply pl-1;
+  }
+
+  .markdown-body li::marker {
+    @apply text-lime-ia font-bold;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-deep-blue/10 rounded-full hover:bg-lime-ia/30;
+}
+
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide sidebar and other fixed elements */
+  aside, nav, .fixed, .absolute {
+    display: none !important;
+  }
+
+  #invoice-preview {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+

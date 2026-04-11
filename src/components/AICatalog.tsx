@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, CheckCircle2, ArrowRight, Zap, Target, Cpu } from 'lucide-react';
+import { Sparkles, CheckCircle2, ArrowRight, Zap, Target, Cpu, Edit2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
@@ -24,6 +25,32 @@ export const AICatalog: React.FC = () => {
 
   const fixedSolutions = services.filter(s => s[AIRTABLE_CONFIG.FIELDS.SERVICES.TYPE] === 'Fixe');
   const variableServices = services.filter(s => s[AIRTABLE_CONFIG.FIELDS.SERVICES.TYPE] === 'Variable');
+
+  const getServiceLogo = (name: string) => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('connect')) return 'https://i.postimg.cc/kX1fmzXD/Doulia_Connect.jpg';
+    if (lowerName.includes('process')) return 'https://i.postimg.cc/YqsfVFbS/Doulia_Process.jpg';
+    if (lowerName.includes('insight')) return 'https://i.postimg.cc/Wz96sqVK/Doulia_Insight.jpg';
+    return 'https://i.postimg.cc/hP5bwmpt/Doulia_Magique_logo.jpg';
+  };
+
+  const [allocation, setAllocation] = React.useState([
+    { label: 'GPU / Cloud', value: 45 },
+    { label: 'Talents IA', value: 35 },
+    { label: 'Marketing', value: 15 },
+    { label: 'Autres', value: 5 },
+  ]);
+
+  const handleEditAllocation = (index: number) => {
+    const item = allocation[index];
+    const newValue = prompt(`Nouvelle valeur pour ${item.label} (%) :`, item.value.toString());
+    if (newValue && !isNaN(parseInt(newValue))) {
+      const newAlloc = [...allocation];
+      newAlloc[index] = { ...item, value: parseInt(newValue) };
+      setAllocation(newAlloc);
+      toast.success("Allocation mise à jour");
+    }
+  };
 
   return (
     <div className="p-6 space-y-10">
@@ -54,8 +81,13 @@ export const AICatalog: React.FC = () => {
                 "bg-gradient-to-br from-lime-ia/5 to-deep-blue/5"
               )}
             >
-              <div className="mb-6 p-3 bg-deep-blue/40 rounded-xl w-fit text-lime-ia group-hover:scale-110 transition-transform">
-                <Zap size={24} />
+              <div className="mb-6 h-16 w-16 overflow-hidden rounded-xl border-2 border-lime-ia shadow-lg group-hover:scale-110 transition-transform">
+                <img 
+                  src={getServiceLogo(sol[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME])} 
+                  alt={sol[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]} 
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <h3 className="text-xl font-bold text-deep-blue mb-2">{sol[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}</h3>
               <p className="text-[12px] text-deep-blue/60 mb-6 leading-relaxed">{sol[AIRTABLE_CONFIG.FIELDS.SERVICES.DESCRIPTION]}</p>
@@ -85,9 +117,17 @@ export const AICatalog: React.FC = () => {
             <motion.div 
               key={i}
               whileHover={{ x: 5 }}
-              className="premium-card p-4 flex items-center justify-between ai-glow group"
+              className="premium-card p-4 flex items-center gap-4 ai-glow group"
             >
-              <div>
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-lime-ia/30">
+                <img 
+                  src={getServiceLogo(service[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME])} 
+                  alt={service[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]} 
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="flex-1">
                 <h4 className="text-sm font-bold text-deep-blue group-hover:text-lime-ia transition-colors">{service[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}</h4>
                 <p className="text-[10px] text-deep-blue/40">{service[AIRTABLE_CONFIG.FIELDS.SERVICES.DESCRIPTION]}</p>
               </div>
@@ -99,6 +139,38 @@ export const AICatalog: React.FC = () => {
           <p className="text-[11px] text-deep-blue/40 italic">
             * Tarification sur devis après analyse de complexité et étude de ROI.
           </p>
+        </div>
+      </section>
+
+      {/* Allocation Ressources Section */}
+      <section className="space-y-6">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-deep-blue/60 border-l-2 border-lime-ia pl-4">Allocation Ressources</h2>
+        <div className="premium-card p-6 ai-glow">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {allocation.map((item, i) => (
+              <div key={i} className="space-y-3 group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase text-deep-blue/40 tracking-wider">{item.label}</span>
+                    <button 
+                      onClick={() => handleEditAllocation(i)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-deep-blue/5 rounded text-deep-blue/20 hover:text-deep-blue transition-all"
+                    >
+                      <Edit2 size={10} />
+                    </button>
+                  </div>
+                  <span className="text-sm font-bold text-lime-ia">{item.value}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-deep-blue/5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${item.value}%` }}
+                    className="h-full bg-lime-ia shadow-[0_0_10px_rgba(131,197,1,0.2)]"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

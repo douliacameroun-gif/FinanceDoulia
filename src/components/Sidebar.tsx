@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onLogout: () => void;
 }
 
 const menuItems = [
@@ -30,7 +31,7 @@ const menuItems = [
   { id: 'catalogue', label: 'Catalogue IA', icon: Cpu },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -96,7 +97,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
       {/* Footer */}
       <div className="p-3 border-t border-white/5">
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-400/5 transition-all duration-300 text-[13px] font-display font-medium">
+        <button 
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-400/5 transition-all duration-300 text-[13px] font-display font-medium"
+        >
           <LogOut size={18} />
           {!isCollapsed && <span>Déconnexion</span>}
         </button>

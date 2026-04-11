@@ -28,7 +28,8 @@ import {
   Eye,
   FileCheck,
   BarChart3,
-  Users
+  Users,
+  Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -150,6 +151,31 @@ export const CRM: React.FC = () => {
   const handleViewClient = (client: any) => {
     setSelectedClient(client);
     toast.info(`Ouverture de la fiche : ${client[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME]}`);
+  };
+
+  const handleEditClient = async (client: any) => {
+    const newName = prompt("Nouveau nom de l'entreprise :", client[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME]);
+    const newContact = prompt("Nouveau contact :", client[AIRTABLE_CONFIG.FIELDS.CLIENTS.CONTACT]);
+    const newValue = prompt("Nouvelle valeur (XAF) :", client[AIRTABLE_CONFIG.FIELDS.CLIENTS.TOTAL_VALUE]?.toString());
+
+    if (newName && newContact && newValue && !isNaN(parseInt(newValue))) {
+      setIsLoadingClients(true);
+      try {
+        const fields: any = {};
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME] = newName;
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.CONTACT] = newContact;
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.TOTAL_VALUE] = parseInt(newValue);
+        
+        await airtableService.updateClient(client.id, fields);
+        const data = await airtableService.getClients();
+        setClients(data);
+        toast.success("Fiche client mise à jour !");
+      } catch (error) {
+        toast.error("Erreur lors de la mise à jour");
+      } finally {
+        setIsLoadingClients(false);
+      }
+    }
   };
 
   const handleSendMail = (client: any) => {
@@ -460,6 +486,12 @@ export const CRM: React.FC = () => {
                           className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-lime-ia transition-colors"
                         >
                           <Eye size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleEditClient(client); }}
+                          className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-lime-ia transition-colors"
+                        >
+                          <Edit2 size={14} />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleSendMail(client); }}
@@ -783,7 +815,7 @@ export const CRM: React.FC = () => {
                     {/* Mock Social Header */}
                     <div className="p-4 flex items-center gap-3 border-b border-gray-100">
                       <div className="w-10 h-10 rounded-full bg-deep-blue flex items-center justify-center">
-                        <img src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" alt="D" className="w-8 h-8 rounded-full" />
+                        <img src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" alt="D" className="w-8 h-8 rounded-full object-cover" />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-gray-900">Doulia Finance Hub</p>

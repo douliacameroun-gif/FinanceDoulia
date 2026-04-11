@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { InvoiceItem } from '../lib/airtable-schema';
@@ -248,18 +249,21 @@ export const InvoiceGenerator: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <div className="space-y-2">
-                <label className="premium-label">Prix Fixes (Catalogue)</label>
-                <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-6 pt-4">
+              <div className="space-y-3">
+                <label className="premium-label flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-lime-ia" />
+                  Prix Fixes (Catalogue)
+                </label>
+                <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                   {isLoading ? (
-                    [1, 2, 3].map(i => <div key={i} className="h-10 skeleton" />)
+                    [1, 2, 3].map(i => <div key={i} className="h-10 skeleton rounded-xl" />)
                   ) : (
                     fixedPrices.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => addItem(p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], p[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0, 'fixed')}
-                        className="text-left px-3 py-2 rounded-xl bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-all border border-deep-blue/5 text-deep-blue font-medium"
+                        className="text-left px-3 py-2.5 rounded-xl bg-white hover:bg-lime-ia hover:text-deep-blue text-[11px] transition-all border border-deep-blue/5 text-deep-blue font-bold shadow-sm hover:shadow-md"
                       >
                         {p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}
                       </button>
@@ -268,11 +272,14 @@ export const InvoiceGenerator: React.FC = () => {
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <label className="premium-label">Services Variables</label>
-                <div className="flex flex-col gap-2">
+              <div className="space-y-3">
+                <label className="premium-label flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Services Variables
+                </label>
+                <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                   {isLoading ? (
-                    [1, 2].map(i => <div key={i} className="h-10 skeleton" />)
+                    [1, 2].map(i => <div key={i} className="h-10 skeleton rounded-xl" />)
                   ) : (
                     variableServices.map((s) => (
                       <button
@@ -281,7 +288,7 @@ export const InvoiceGenerator: React.FC = () => {
                           const price = prompt(`Entrez le prix pour ${s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}:`, "0");
                           if (price) addItem(s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], parseInt(price), 'variable');
                         }}
-                        className="text-left px-3 py-2 rounded-xl bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-all border border-deep-blue/5 text-deep-blue font-medium"
+                        className="text-left px-3 py-2.5 rounded-xl bg-white hover:bg-blue-500 hover:text-white text-[11px] transition-all border border-deep-blue/5 text-deep-blue font-bold shadow-sm hover:shadow-md"
                       >
                         {s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}
                       </button>
@@ -386,7 +393,7 @@ export const InvoiceGenerator: React.FC = () => {
               <img 
                 src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
                 alt="Logo" 
-                className="h-20 w-20 object-cover rounded-xl mb-4 border-2 border-lime-ia shadow-lg"
+                className="h-24 w-24 object-cover rounded-xl mb-4 border-2 border-lime-ia shadow-lg"
                 referrerPolicy="no-referrer"
               />
               <h1 className="text-3xl font-bold tracking-tighter uppercase text-deep-blue">
@@ -463,25 +470,99 @@ export const InvoiceGenerator: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-12 pt-8 text-center border-t border-slate-100">
-            <p className="text-[11px] font-bold text-deep-blue mb-4 italic">
-              "L'IA n'est pas un coût, c'est un investissement dont le ROI est visible dès le premier mois."
-            </p>
-            <div className="flex justify-center gap-8 mb-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-deep-blue">
-                <div className="w-1.5 h-1.5 rounded-full bg-lime-ia" />
-                <span>contact@doulia.cm</span>
+          {/* Validation Section */}
+          <div className="mt-16 grid grid-cols-2 gap-8 items-end relative">
+            {/* QR Code Security */}
+            <div className="flex flex-col items-start gap-2">
+              <div className="p-2 bg-white border border-slate-100 rounded-lg shadow-sm">
+                <QRCodeSVG 
+                  value={`DOULIA-AUTH|ID:${invoiceNumber}|DATE:${new Date().toLocaleDateString()}|AMT:${calculateTotal()}|CLIENT:${clientName}`}
+                  size={64}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-deep-blue">
-                <div className="w-1.5 h-1.5 rounded-full bg-lime-ia" />
-                <span>www.doulia.cm</span>
+              <div className="space-y-0.5">
+                <p className="text-[8px] font-black text-deep-blue uppercase tracking-tighter">Vérification d'Authenticité</p>
+                <p className="text-[7px] text-slate-400 font-medium">Scannez pour vérifier l'originalité du document</p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 max-w-xs mx-auto leading-relaxed">
-              Merci pour votre confiance. Ce document est généré par l'IA Doulia Finance Hub.
-              DOULIA - RC/DLA/2024/B/1234
+
+            {/* Signature & Digital Stamp */}
+            <div className="relative flex flex-col items-center">
+              {/* Digital Stamp (Cachet) */}
+              <div className="absolute -top-16 -right-8 w-36 h-36 rounded-full border-[3px] border-blue-800/20 flex items-center justify-center rotate-12 pointer-events-none mix-blend-multiply">
+                <div className="w-[130px] h-[130px] rounded-full border border-blue-800/30 flex flex-col items-center justify-center p-3 text-center relative">
+                  {/* Circular Text (Simulated) */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-full h-full rounded-full border border-dashed border-blue-800/10 animate-[spin_20s_linear_infinite]" />
+                  </div>
+                  
+                  <img 
+                    src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
+                    alt="Stamp Logo" 
+                    className="w-10 h-10 object-cover rounded-full mb-1.5 opacity-40 grayscale contrast-125"
+                  />
+                  <p className="text-[8px] font-black text-blue-800/60 uppercase tracking-widest leading-none">DOULIA</p>
+                  <div className="h-px w-8 bg-blue-800/20 my-1" />
+                  <p className="text-[7px] font-bold text-blue-800/50 uppercase leading-tight">
+                    Direction Générale<br/>Douala - Cameroun
+                  </p>
+                </div>
+              </div>
+
+              {/* Signature Area */}
+              <div className="text-center z-10">
+                <p className="text-[10px] font-bold uppercase text-slate-400 mb-6 tracking-widest">Le Directeur Général</p>
+                <div className="relative inline-block">
+                  <p className="font-handwriting text-5xl text-blue-900/90 -rotate-2 mb-2 select-none filter drop-shadow-[0.5px_0.5px_0px_rgba(30,58,138,0.3)] tracking-tight skew-x-[-2deg]">
+                    Marc Bagnack
+                  </p>
+                  {/* Signature Flourish - Complex Path */}
+                  <svg className="absolute -bottom-6 -left-8 w-64 h-16 text-blue-900/20 pointer-events-none" viewBox="0 0 200 60">
+                    <path 
+                      d="M10,40 Q40,10 80,40 T150,30 Q180,20 195,50 M15,45 Q60,35 120,45" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="1.2" 
+                      strokeLinecap="round"
+                      className="opacity-30"
+                    />
+                  </svg>
+                  <div className="w-48 h-px bg-slate-200 mx-auto mt-2" />
+                </div>
+                <p className="text-[11px] font-black text-deep-blue mt-4 tracking-tight">Marc Bagnack</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-auto pt-6 border-t border-slate-100">
+            <p className="text-[10px] font-bold text-deep-blue text-center mb-3 italic">
+              "L'IA n'est pas un coût, c'est un investissement dont le ROI est visible dès le premier mois."
             </p>
+            <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[9px] font-bold text-slate-500">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span className="text-deep-blue">contact@doulia.cm</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span className="text-deep-blue">www.doulia.cm</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span>Merci pour votre confiance.</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span>Généré par Doulia Finance Hub</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span className="uppercase">DOULIA - RC/DLA/2024/B/1234</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -88,9 +88,39 @@ export const Budget: React.FC = () => {
     toast.success("Dépense ajoutée au budget local");
   };
 
-  const handleEditExpense = (index: number) => {
+  const [allocation, setAllocation] = React.useState([
+    { label: 'GPU / Cloud', value: 45 },
+    { label: 'Talents IA', value: 35 },
+    { label: 'Marketing', value: 15 },
+    { label: 'Autres', value: 5 },
+  ]);
+
+  const handleEditAllocation = (index: number) => {
+    const item = allocation[index];
+    const newValue = prompt(`Nouvelle valeur pour ${item.label} (%) :`, item.value.toString());
+    if (newValue && !isNaN(parseInt(newValue))) {
+      const newAlloc = [...allocation];
+      newAlloc[index] = { ...item, value: parseInt(newValue) };
+      setAllocation(newAlloc);
+      toast.success("Allocation mise à jour");
+    }
+  };
+
+  const handleEditExpenseLine = (index: number) => {
     const exp = expenses[index];
-    toast.info(`Modification de : ${exp.label} (Simulation)`);
+    const newLabel = prompt("Nouveau libellé :", exp.label);
+    const newAmount = prompt("Nouveau montant (XAF) :", exp.amount.toString());
+    
+    if (newLabel && newAmount && !isNaN(parseInt(newAmount))) {
+      const newExp = [...expenses];
+      newExp[index] = { ...exp, label: newLabel, amount: parseInt(newAmount) };
+      setExpenses(newExp);
+      toast.success("Charge mise à jour");
+    }
+  };
+
+  const handleEditExpense = (index: number) => {
+    handleEditExpenseLine(index);
   };
 
   const handleEditInvoice = (index: number) => {
@@ -104,15 +134,34 @@ export const Budget: React.FC = () => {
 
   const handleOCRScan = () => {
     setIsScanning(true);
-    toast.loading("Analyse OCR en cours...", { duration: 2500 });
-    setTimeout(() => {
+    const toastId = toast.loading("Analyse OCR en cours...", { 
+      duration: 10000,
+      action: {
+        label: "Annuler",
+        onClick: () => handleStopOCR(toastId)
+      }
+    });
+    
+    const timeoutId = setTimeout(() => {
       setIsScanning(false);
+      toast.dismiss(toastId);
       toast.success("Facture analysée avec succès !");
       setInvoices(prev => [
         { id: `INV-00${prev.length + 1}`, provider: 'Orange Cameroon', amount: 45000, status: 'processed', date: '11/04/2026' },
         ...prev
       ]);
     }, 2500);
+
+    (window as any).ocrTimeoutId = timeoutId;
+  };
+
+  const handleStopOCR = (toastId?: string | number) => {
+    setIsScanning(false);
+    if (toastId) toast.dismiss(toastId);
+    if ((window as any).ocrTimeoutId) {
+      clearTimeout((window as any).ocrTimeoutId);
+    }
+    toast.error("Analyse OCR interrompue");
   };
 
   return (
@@ -387,14 +436,24 @@ export const Budget: React.FC = () => {
                 <ScanLine size={20} className="text-lime-ia" />
                 Traitement Intelligent des Factures (OCR)
               </h3>
-              <button 
-                onClick={handleOCRScan}
-                disabled={isScanning}
-                className="btn-primary flex items-center gap-2"
-              >
-                {isScanning ? <History className="animate-spin" size={18} /> : <Plus size={18} />}
-                Scanner une Facture
-              </button>
+              <div className="flex gap-2">
+                {isScanning && (
+                  <button 
+                    onClick={() => handleStopOCR()}
+                    className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg text-xs font-bold transition-all border border-red-500/20"
+                  >
+                    Stopper l'Analyse
+                  </button>
+                )}
+                <button 
+                  onClick={handleOCRScan}
+                  disabled={isScanning}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  {isScanning ? <History className="animate-spin" size={18} /> : <Plus size={18} />}
+                  Scanner une Facture
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -501,15 +560,18 @@ export const Budget: React.FC = () => {
             <div className="premium-card p-6 ai-glow">
               <h4 className="text-[10px] font-bold uppercase text-deep-blue/40 tracking-widest mb-4">Allocation Ressources</h4>
               <div className="space-y-4">
-                {[
-                  { label: 'GPU / Cloud', value: 45 },
-                  { label: 'Talents IA', value: 35 },
-                  { label: 'Marketing', value: 15 },
-                  { label: 'Autres', value: 5 },
-                ].map((item, i) => (
-                  <div key={i} className="space-y-1.5">
+                {allocation.map((item, i) => (
+                  <div key={i} className="space-y-1.5 group">
                     <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-deep-blue/60">{item.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-deep-blue/60">{item.label}</span>
+                        <button 
+                          onClick={() => handleEditAllocation(i)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-deep-blue/5 rounded text-deep-blue/20 hover:text-deep-blue transition-all"
+                        >
+                          <Edit2 size={10} />
+                        </button>
+                      </div>
                       <span className="text-deep-blue">{item.value}%</span>
                     </div>
                     <div className="w-full h-1 bg-deep-blue/5 rounded-full overflow-hidden">

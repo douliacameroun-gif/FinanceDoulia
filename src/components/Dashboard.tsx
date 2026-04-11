@@ -1,5 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+
+const REVENUE_DATA = [
+  { name: 'Jan', value: 4000000 },
+  { name: 'Fév', value: 5500000 },
+  { name: 'Mar', value: 4500000 },
+  { name: 'Avr', value: 7000000 },
+  { name: 'Mai', value: 6500000 },
+  { name: 'Juin', value: 8500000 },
+  { name: 'Juil', value: 9500000 },
+  { name: 'Août', value: 8000000 },
+  { name: 'Sept', value: 10000000 },
+  { name: 'Oct', value: 11000000 },
+  { name: 'Nov', value: 10500000 },
+  { name: 'Déc', value: 12000000 },
+];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-deep-blue p-3 rounded-lg border border-white/10 shadow-2xl">
+        <p className="text-[10px] font-bold text-white/40 uppercase mb-1">{label}</p>
+        <p className="text-sm font-bold text-lime-ia">{payload[0].value.toLocaleString()} XAF</p>
+      </div>
+    );
+  }
+  return null;
+};
 import { TrendingUp, Users, Briefcase, Wallet, ArrowUpRight, ArrowDownRight, FileText, Clock, Calendar as CalendarIcon, RefreshCw, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -197,21 +233,35 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="h-[200px] w-full flex items-end justify-between gap-2 px-2">
-            {[40, 55, 45, 70, 65, 85, 95, 80, 100, 110, 105, 120].map((height, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                <div className="w-full relative">
-                  <motion.div 
-                    initial={{ height: 0 }}
-                    animate={{ height: `${height}%` }}
-                    className="w-full bg-lime-ia/10 group-hover:bg-lime-ia/20 rounded-t-sm transition-colors relative"
-                  >
-                    <div className="absolute top-0 left-0 w-full h-1 bg-lime-ia shadow-[0_0_10px_rgba(131,197,1,0.3)]" />
-                  </motion.div>
-                </div>
-                <span className="text-[9px] text-deep-blue/20 font-medium">{['J','F','M','A','M','J','J','A','S','O','N','D'][i]}</span>
-              </div>
-            ))}
+          <div className="h-[240px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#83C501" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#83C501" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#001F3F', opacity: 0.2, fontSize: 10, fontWeight: 700 }}
+                  dy={10}
+                />
+                <YAxis hide />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#83C501" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorValue)" 
+                  animationDuration={2000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

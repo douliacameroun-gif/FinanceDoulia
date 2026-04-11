@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Chatbot } from './components/Chatbot';
 import { Dashboard } from './components/Dashboard';
@@ -8,11 +8,34 @@ import { ROISimulator } from './components/ROISimulator';
 import { Projects } from './components/Projects';
 import { Budget } from './components/Budget';
 import { AICatalog } from './components/AICatalog';
+import { LoginPortal } from './components/LoginPortal';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('doulia_auth') === 'true';
+  });
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('doulia_auth', 'true');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('doulia_auth');
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPortal onLogin={handleLogin} />
+        <Toaster position="top-right" richColors closeButton />
+      </>
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -48,7 +71,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen bg-cloud-gray text-deep-blue selection:bg-lime-ia selection:text-deep-blue">
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onLogout={handleLogout} />
 
       {/* Main Content */}
       <main className="flex-1 relative overflow-x-hidden">

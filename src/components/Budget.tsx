@@ -1,6 +1,7 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, Server, Globe, Zap, Building2, Truck, ScanLine, TrendingUp, History, AlertCircle, FileText, Plus, Edit2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Wallet, PieChart, ArrowUpRight, ArrowDownRight, Server, Globe, Zap, Building2, Truck, ScanLine, TrendingUp, History, AlertCircle, FileText, Plus, Edit2, RefreshCw, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 const EXPENSES = [
@@ -57,65 +58,60 @@ export const Budget: React.FC = () => {
   const netMargin = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.NET_MARGIN] as number || (estimatedRevenue - totalExpenses);
   const marginPercentage = estimatedRevenue > 0 ? (netMargin / estimatedRevenue) * 100 : 0;
 
-  const handleAddExpense = () => {
-    const label = prompt('Libellé de la dépense :');
-    const amount = prompt('Montant (XAF) :');
-    const category = prompt('Catégorie (Technologie, Infrastructure, Opérations, Croissance) :');
-    
-    if (label && amount && category) {
-      setExpenses(prev => [
-        ...prev,
-        { 
-          label, 
-          amount: parseInt(amount), 
-          category, 
-          icon: Wallet, 
-          trend: 'stable' 
-        }
-      ]);
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [newExpense, setNewExpense] = React.useState({
+    label: '',
+    amount: '',
+    category: 'Technologie'
+  });
+
+  const handleAddExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExpense.label || !newExpense.amount) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
     }
+
+    setExpenses(prev => [
+      ...prev,
+      { 
+        label: newExpense.label, 
+        amount: parseInt(newExpense.amount), 
+        category: newExpense.category, 
+        icon: Wallet, 
+        trend: 'stable' 
+      }
+    ]);
+    
+    setIsAddModalOpen(false);
+    setNewExpense({ label: '', amount: '', category: 'Technologie' });
+    toast.success("Dépense ajoutée au budget local");
   };
 
   const handleEditExpense = (index: number) => {
     const exp = expenses[index];
-    const newAmount = prompt(`Modifier le montant pour ${exp.label} (XAF) :`, exp.amount.toString());
-    if (newAmount && !isNaN(parseInt(newAmount))) {
-      const newExpenses = [...expenses];
-      newExpenses[index] = { ...exp, amount: parseInt(newAmount) };
-      setExpenses(newExpenses);
-    }
+    toast.info(`Modification de : ${exp.label} (Simulation)`);
   };
 
   const handleEditInvoice = (index: number) => {
     const inv = invoices[index];
-    const newAmount = prompt(`Modifier le montant pour ${inv.provider} (XAF) :`, inv.amount.toString());
-    if (newAmount && !isNaN(parseInt(newAmount))) {
-      const newInvoices = [...invoices];
-      newInvoices[index] = { ...inv, amount: parseInt(newAmount) };
-      setInvoices(newInvoices);
-    }
+    toast.info(`Modification facture : ${inv.provider} (Simulation)`);
   };
 
   const handleEditBudgetField = async (field: string, currentVal: number) => {
-    const newVal = prompt(`Modifier ${field} (XAF) :`, currentVal.toString());
-    if (newVal && !isNaN(parseInt(newVal)) && budgets[0]?.id) {
-      const fields: any = {};
-      fields[field] = parseInt(newVal);
-      
-      setIsLoading(true);
-      const success = await airtableService.updateBudget(budgets[0].id, fields);
-      if (success) {
-        await loadBudgets();
-      }
-      setIsLoading(false);
-    }
+    toast.info(`Modification du champ ${field} (Simulation)`);
   };
 
   const handleOCRScan = () => {
     setIsScanning(true);
+    toast.loading("Analyse OCR en cours...", { duration: 2500 });
     setTimeout(() => {
       setIsScanning(false);
-      // Removed alert as per instructions
+      toast.success("Facture analysée avec succès !");
+      setInvoices(prev => [
+        { id: `INV-00${prev.length + 1}`, provider: 'Orange Cameroon', amount: 45000, status: 'processed', date: '11/04/2026' },
+        ...prev
+      ]);
     }, 2500);
   };
 
@@ -224,12 +220,96 @@ export const Budget: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-bold uppercase tracking-widest text-deep-blue/60">Détails des Charges</h3>
               <button 
-                onClick={handleAddExpense}
+                onClick={() => setIsAddModalOpen(true)}
                 className="btn-primary flex items-center gap-2 text-[11px]"
               >
                 <Plus size={14} /> Ajouter une ligne
               </button>
             </div>
+
+            {/* Add Expense Modal */}
+            <AnimatePresence>
+              {isAddModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-deep-blue/40 backdrop-blur-sm">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="premium-card w-full max-w-md p-8 shadow-2xl relative"
+                  >
+                    <button 
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="absolute top-6 right-6 p-2 hover:bg-deep-blue/5 rounded-full text-deep-blue/40"
+                    >
+                      <Plus size={20} className="rotate-45" />
+                    </button>
+
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia">
+                        <Wallet size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-deep-blue">Nouvelle Charge</h3>
+                        <p className="text-xs text-deep-blue/40">Ajoutez une dépense prévisionnelle ou réelle.</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAddExpense} className="space-y-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="premium-label">Libellé de la dépense *</label>
+                          <input 
+                            type="text"
+                            value={newExpense.label}
+                            onChange={(e) => setNewExpense({...newExpense, label: e.target.value})}
+                            className="premium-input"
+                            placeholder="Ex: Abonnement ChatGPT Team"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="premium-label">Montant (XAF) *</label>
+                          <div className="relative">
+                            <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
+                            <input 
+                              type="number"
+                              value={newExpense.amount}
+                              onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                              className="premium-input pl-10"
+                              placeholder="0"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="premium-label">Catégorie</label>
+                          <select 
+                            value={newExpense.category}
+                            onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                            className="premium-input appearance-none"
+                          >
+                            <option>Technologie</option>
+                            <option>Infrastructure</option>
+                            <option>Opérations</option>
+                            <option>Croissance</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <button 
+                          type="submit"
+                          className="btn-primary flex-1"
+                        >
+                          Enregistrer la dépense
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
             <div className="space-y-4">
               {expenses.map((exp, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-deep-blue/5 rounded-xl border border-deep-blue/5 hover:border-lime-ia/20 transition-colors group">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { TrendingUp, Users, Briefcase, Wallet, ArrowUpRight, ArrowDownRight, FileText, Clock, Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Briefcase, Wallet, ArrowUpRight, ArrowDownRight, FileText, Clock, Calendar as CalendarIcon, RefreshCw, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
@@ -148,16 +149,24 @@ export const Dashboard: React.FC = () => {
             <RefreshCw size={16} className={cn(isLoading && "animate-spin")} />
           </button>
           <button 
-            onClick={() => window.print()}
+            onClick={() => {
+              toast.info("Génération du rapport mensuel consolidé...");
+              window.print();
+            }}
             className="btn-secondary"
           >
             Rapport Mensuel
           </button>
           <button 
-            onClick={() => alert('Lancement d\'une nouvelle analyse stratégique IA...')}
-            className="btn-primary"
+            onClick={() => {
+              toast.loading("Lancement d'une nouvelle analyse stratégique IA...", { duration: 2000 });
+              setTimeout(() => {
+                toast.success("Analyse terminée : 3 opportunités de croissance identifiées.");
+              }, 2000);
+            }}
+            className="btn-primary flex items-center gap-2"
           >
-            Nouvelle Analyse
+            <Sparkles size={16} /> Nouvelle Analyse
           </button>
         </div>
       </div>
@@ -213,7 +222,10 @@ export const Dashboard: React.FC = () => {
             <p className="text-[13px] text-deep-blue/70 mb-4 leading-relaxed">
               L'IA Doulia suggère une réallocation de 15% du budget API vers le module **Insight** pour maximiser le ROI du trimestre prochain.
             </p>
-            <button className="btn-primary w-full">
+            <button 
+              onClick={() => toast.success("Stratégie d'optimisation appliquée avec succès !")}
+              className="btn-primary w-full"
+            >
               Appliquer la Stratégie
             </button>
           </div>

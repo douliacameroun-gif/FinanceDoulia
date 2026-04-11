@@ -1,6 +1,7 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
@@ -35,38 +36,65 @@ export const Projects: React.FC = () => {
     loadProjects();
   }, []);
 
-  const handleAddProject = async () => {
-    const name = prompt('Nom du projet :');
-    const client = prompt('Client (ID) :');
-    const type = prompt('Type (Développement, IA, Cloud, etc.) :');
-    const budget = prompt('Budget (XAF) :');
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [newProject, setNewProject] = React.useState({
+    name: '',
+    client: '',
+    type: 'Développement IA',
+    budget: '',
+    description: ''
+  });
 
-    if (name && client && type && budget) {
-      setIsLoading(true);
+  const handleAddProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProject.name || !newProject.client || !newProject.budget) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    setIsLoading(true);
+    const promise = new Promise(async (resolve, reject) => {
       try {
         const fields: any = {};
-        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME] = name;
-        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.CLIENT] = [client]; // Airtable expects an array for linked records
-        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.TYPE] = type;
+        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME] = newProject.name;
+        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.CLIENT] = [newProject.client];
+        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.TYPE] = newProject.type;
         fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.STATUS] = 'En cours';
         fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS] = 0;
         
         await airtableService.createProject(fields);
-        
-        // Reload projects
         const data = await airtableService.getProjects();
         setProjects(data);
+        setIsAddModalOpen(false);
+        setNewProject({ name: '', client: '', type: 'Développement IA', budget: '', description: '' });
+        resolve(true);
       } catch (error) {
-        console.error("Error creating project:", error);
-        alert("Erreur lors de la création du projet sur Airtable.");
+        reject(error);
       } finally {
         setIsLoading(false);
       }
-    }
+    });
+
+    toast.promise(promise, {
+      loading: 'Initialisation du projet...',
+      success: 'Projet créé avec succès !',
+      error: 'Erreur lors de la création du projet',
+    });
+  };
+
+  const handleMagicFill = () => {
+    setNewProject({
+      name: "Automatisation OCR & IA Générative",
+      client: "recX...", // This should ideally be a real client ID from the list
+      type: "Intelligence Artificielle",
+      budget: "15000000",
+      description: "Mise en place d'un système de lecture automatique de factures avec scoring de risque."
+    });
+    toast.success("Remplissage magique IA effectué ✨");
   };
 
   const handleViewDetails = (project: any) => {
-    alert(`Détails du projet: ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME]}\nStatut: ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.STATUS]}\nProgression: ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS]}%`);
+    toast.info(`Détails : ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME]} (${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS]}%)`);
   };
 
   return (
@@ -102,12 +130,141 @@ export const Projects: React.FC = () => {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button 
-              onClick={handleAddProject}
+              onClick={() => setIsAddModalOpen(true)}
               className="btn-primary flex items-center gap-2"
             >
               <Briefcase size={18} /> Nouveau Projet
             </button>
           </div>
+
+          {/* Add Project Modal */}
+          <AnimatePresence>
+            {isAddModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-deep-blue/40 backdrop-blur-sm">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="premium-card w-full max-w-lg p-8 shadow-2xl relative"
+                >
+                  <button 
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="absolute top-6 right-6 p-2 hover:bg-deep-blue/5 rounded-full text-deep-blue/40"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                  </button>
+
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia">
+                      <Briefcase size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-deep-blue">Lancer un Projet</h3>
+                      <p className="text-xs text-deep-blue/40">Définissez les paramètres de votre nouvelle mission IA.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddProject} className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <label className="premium-label">Nom du Projet *</label>
+                        <input 
+                          type="text"
+                          value={newProject.name}
+                          onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                          className="premium-input"
+                          placeholder="Ex: Optimisation Supply Chain IA"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="premium-label">Client (Lien Airtable) *</label>
+                          <input 
+                            type="text"
+                            value={newProject.client}
+                            onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                            className="premium-input"
+                            placeholder="ID du client"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="premium-label">Type de Projet</label>
+                          <select 
+                            value={newProject.type}
+                            onChange={(e) => setNewProject({...newProject, type: e.target.value})}
+                            className="premium-input appearance-none"
+                          >
+                            <option>Développement IA</option>
+                            <option>Audit Stratégique</option>
+                            <option>Cloud & Infra</option>
+                            <option>Formation</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="premium-label">Budget Estimé (XAF) *</label>
+                          <div className="relative">
+                            <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
+                            <input 
+                              type="number"
+                              value={newProject.budget}
+                              onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
+                              className="premium-input pl-10"
+                              placeholder="0"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="premium-label">Priorité</label>
+                          <div className="flex bg-cloud-gray/50 p-1 rounded-lg border border-deep-blue/10">
+                            <button type="button" className="flex-1 py-1.5 rounded-md text-[10px] font-bold bg-lime-ia text-deep-blue">Haute</button>
+                            <button type="button" className="flex-1 py-1.5 rounded-md text-[10px] font-bold text-deep-blue/40">Moyenne</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="premium-label">Description / Brief</label>
+                        <div className="relative">
+                          <FileText size={14} className="absolute left-4 top-4 text-deep-blue/30" />
+                          <textarea 
+                            value={newProject.description}
+                            onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                            className="premium-input pl-10 min-h-[80px] resize-none"
+                            placeholder="Objectifs principaux du projet..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        type="button"
+                        onClick={handleMagicFill}
+                        className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                      >
+                        <Sparkles size={16} /> Magic Fill
+                      </button>
+                      <button 
+                        type="submit"
+                        disabled={isLoading}
+                        className="btn-primary flex-1"
+                      >
+                        {isLoading ? "Initialisation..." : "Lancer le Projet"}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           <div className="premium-card overflow-hidden ai-glow">
             <table className="w-full text-left border-collapse">
               <thead>

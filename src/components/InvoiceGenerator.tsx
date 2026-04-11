@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Trash2, Download, FileCheck, Printer } from 'lucide-react';
+import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { InvoiceItem } from '../lib/airtable-schema';
 
@@ -12,18 +13,24 @@ import { airtableService } from '../lib/airtable';
 export const InvoiceGenerator: React.FC = () => {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [clientName, setClientName] = useState('');
+  const [clientPhone, setClientPhone] = useState('+237 ');
+  const [clientAddress, setClientAddress] = useState('');
+  const [taxId, setTaxId] = useState('');
   const [docType, setDocType] = useState<'invoice' | 'quote'>('invoice');
   const [paymentMethod, setPaymentMethod] = useState('Virement Bancaire / Mobile Money');
   const [paymentTerms, setPaymentTerms] = useState('30 jours');
   const [invoiceNumber, setInvoiceNumber] = useState(`${docType === 'invoice' ? 'INV' : 'DEV'}-${Date.now().toString().slice(-6)}`);
   const [services, setServices] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     const loadServices = async () => {
+      setIsLoading(true);
       const data = await airtableService.getServices();
       if (data.length > 0) {
         setServices(data);
       }
+      setIsLoading(false);
     };
     loadServices();
   }, []);
@@ -40,6 +47,7 @@ export const InvoiceGenerator: React.FC = () => {
       type
     };
     setItems([...items, newItem]);
+    toast.success("Élément ajouté au document");
   };
 
   const addCustomItem = () => {
@@ -60,6 +68,7 @@ export const InvoiceGenerator: React.FC = () => {
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+    toast.info("Élément supprimé");
   };
 
   const calculateTotal = () => {
@@ -67,27 +76,57 @@ export const InvoiceGenerator: React.FC = () => {
   };
 
   const handlePrint = () => {
+    if (!clientName) {
+      toast.error("Veuillez entrer le nom du client avant d'imprimer");
+      return;
+    }
     window.print();
   };
 
   const exportPDF = async () => {
-    const element = document.getElementById('invoice-preview');
-    if (!element) return;
+    if (!clientName) {
+      toast.error("Veuillez entrer le nom du client");
+      return;
+    }
+    
+    const promise = new Promise(async (resolve, reject) => {
+      try {
+        const element = document.getElementById('invoice-preview');
+        if (!element) throw new Error("Preview element not found");
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff'
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`Doulia_${docType === 'invoice' ? 'Facture' : 'Devis'}_${invoiceNumber}.pdf`);
+        resolve(true);
+      } catch (e) {
+        reject(e);
+      }
     });
-    
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`Doulia_${docType === 'invoice' ? 'Facture' : 'Devis'}_${invoiceNumber}.pdf`);
+
+    toast.promise(promise, {
+      loading: 'Génération du PDF...',
+      success: 'PDF exporté avec succès !',
+      error: 'Erreur lors de la génération du PDF',
+    });
+  };
+
+  const handleMagicFill = () => {
+    setClientName("Société Nationale des Hydrocarbures (SNH)");
+    setClientPhone("+237 222 20 19 10");
+    setClientAddress("Boulevard du 20 Mai, Yaoundé, Cameroun");
+    setTaxId("M012345678901A");
+    toast.success("Remplissage magique IA effectué ✨");
   };
 
   return (
@@ -100,92 +139,154 @@ export const InvoiceGenerator: React.FC = () => {
               <FileCheck size={24} className="text-lime-ia" />
               Générateur de Documents
             </h2>
-            <div className="flex bg-cloud-gray/50 p-1 rounded-lg border border-deep-blue/10">
+            <div className="flex items-center gap-3">
               <button 
-                onClick={() => setDocType('invoice')}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all",
-                  docType === 'invoice' ? "bg-lime-ia text-deep-blue" : "text-deep-blue/40 hover:text-deep-blue"
-                )}
+                onClick={handleMagicFill}
+                className="p-2 text-lime-ia hover:bg-lime-ia/10 rounded-lg transition-colors"
+                title="Remplissage magique IA"
               >
-                Facture
+                <Sparkles size={18} />
               </button>
-              <button 
-                onClick={() => setDocType('quote')}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all",
-                  docType === 'quote' ? "bg-lime-ia text-deep-blue" : "text-deep-blue/40 hover:text-deep-blue"
-                )}
-              >
-                Devis
-              </button>
+              <div className="flex bg-cloud-gray/50 p-1 rounded-lg border border-deep-blue/10">
+                <button 
+                  onClick={() => setDocType('invoice')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all",
+                    docType === 'invoice' ? "bg-lime-ia text-deep-blue" : "text-deep-blue/40 hover:text-deep-blue"
+                  )}
+                >
+                  Facture
+                </button>
+                <button 
+                  onClick={() => setDocType('quote')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all",
+                    docType === 'quote' ? "bg-lime-ia text-deep-blue" : "text-deep-blue/40 hover:text-deep-blue"
+                  )}
+                >
+                  Devis
+                </button>
+              </div>
             </div>
           </div>
           
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase text-deep-blue/40 mb-2">Client</label>
-              <input 
-                type="text" 
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Nom de l'entreprise ou du client"
-                className="w-full bg-cloud-gray/50 border border-deep-blue/10 rounded-lg px-4 py-2 focus:border-lime-ia/50 outline-none text-deep-blue"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-deep-blue/40 mb-2">Mode de Paiement</label>
+                <label className="premium-label">Nom du Client *</label>
                 <input 
                   type="text" 
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-cloud-gray/50 border border-deep-blue/10 rounded-lg px-4 py-2 focus:border-lime-ia/50 outline-none text-deep-blue text-sm"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Ex: SNH Cameroun"
+                  className="premium-input"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-deep-blue/40 mb-2">Conditions</label>
+                <label className="premium-label">Téléphone</label>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
+                  <input 
+                    type="text" 
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    className="premium-input pl-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="premium-label">Adresse de Facturation</label>
+              <div className="relative">
+                <MapPin size={16} className="absolute left-4 top-4 text-deep-blue/30" />
+                <textarea 
+                  value={clientAddress}
+                  onChange={(e) => setClientAddress(e.target.value)}
+                  placeholder="Ex: Boulevard du 20 Mai, Yaoundé"
+                  className="premium-input pl-11 min-h-[80px] resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="premium-label">N° Contribuable (NIU)</label>
+                <input 
+                  type="text" 
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  placeholder="Ex: M0123..."
+                  className="premium-input"
+                />
+              </div>
+              <div>
+                <label className="premium-label">Mode de Paiement</label>
+                <div className="relative">
+                  <CreditCard size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
+                  <input 
+                    type="text" 
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="premium-input pl-11"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="premium-label">Conditions de Paiement</label>
+              <div className="relative">
+                <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
                 <input 
                   type="text" 
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value)}
-                  className="w-full bg-cloud-gray/50 border border-deep-blue/10 rounded-lg px-4 py-2 focus:border-lime-ia/50 outline-none text-deep-blue text-sm"
+                  className="premium-input pl-11"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase text-deep-blue/40">Prix Fixes (Catalogue)</label>
+                <label className="premium-label">Prix Fixes (Catalogue)</label>
                 <div className="flex flex-col gap-2">
-                  {fixedPrices.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => addItem(p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], p[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0, 'fixed')}
-                      className="text-left px-3 py-2 rounded bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-colors border border-deep-blue/5 text-deep-blue"
-                    >
-                      {p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]} - {(p[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0).toLocaleString()} FCFA
-                    </button>
-                  ))}
+                  {isLoading ? (
+                    [1, 2, 3].map(i => <div key={i} className="h-10 skeleton" />)
+                  ) : (
+                    fixedPrices.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => addItem(p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], p[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0, 'fixed')}
+                        className="text-left px-3 py-2 rounded-xl bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-all border border-deep-blue/5 text-deep-blue font-medium"
+                      >
+                        {p[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
               
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase text-deep-blue/40">Services Variables</label>
+                <label className="premium-label">Services Variables</label>
                 <div className="flex flex-col gap-2">
-                  {variableServices.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => {
-                        const price = prompt(`Entrez le prix pour ${s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}:`, "0");
-                        if (price) addItem(s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], parseInt(price), 'variable');
-                      }}
-                      className="text-left px-3 py-2 rounded bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-colors border border-deep-blue/5 text-deep-blue"
-                    >
-                      {s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}
-                    </button>
-                  ))}
+                  {isLoading ? (
+                    [1, 2].map(i => <div key={i} className="h-10 skeleton" />)
+                  ) : (
+                    variableServices.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          const price = prompt(`Entrez le prix pour ${s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}:`, "0");
+                          if (price) addItem(s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], parseInt(price), 'variable');
+                        }}
+                        className="text-left px-3 py-2 rounded-xl bg-cloud-gray/50 hover:bg-lime-ia hover:text-deep-blue text-xs transition-all border border-deep-blue/5 text-deep-blue font-medium"
+                      >
+                        {s[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME]}
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -194,56 +295,65 @@ export const InvoiceGenerator: React.FC = () => {
 
         <div className="premium-card p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold uppercase text-deep-blue/40">Lignes du document</h3>
+            <h3 className="text-sm font-bold uppercase text-deep-blue/40 tracking-widest">Lignes du document</h3>
             <button 
               onClick={addCustomItem}
-              className="text-xs font-bold text-lime-ia hover:underline flex items-center gap-1"
+              className="text-xs font-bold text-lime-ia hover:bg-lime-ia/10 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
             >
               <Plus size={14} /> Ajouter une ligne
             </button>
           </div>
           <div className="space-y-3">
             {items.map((item, i) => (
-              <div key={i} className="space-y-2 p-3 bg-cloud-gray/30 rounded-lg border border-deep-blue/5">
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 p-4 bg-cloud-gray/30 rounded-xl border border-deep-blue/5"
+              >
                 <div className="flex gap-2">
                   <input 
                     type="text"
                     value={item.description}
                     onChange={(e) => updateItem(i, 'description', e.target.value)}
-                    className="flex-1 bg-white border border-deep-blue/10 rounded px-2 py-1 text-sm text-deep-blue outline-none focus:border-lime-ia"
+                    className="flex-1 premium-input py-2 text-sm"
+                    placeholder="Description du service"
                   />
-                  <button onClick={() => removeItem(i)} className="text-red-500 hover:bg-red-500/10 p-1 rounded transition-colors">
-                    <Trash2 size={16} />
+                  <button onClick={() => removeItem(i)} className="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors">
+                    <Trash2 size={18} />
                   </button>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-[10px] uppercase font-bold text-deep-blue/40 mb-1">Prix Unitaire</label>
+                    <label className="premium-label">Prix Unitaire</label>
                     <input 
                       type="number"
                       value={item.unitPrice}
                       onChange={(e) => updateItem(i, 'unitPrice', parseInt(e.target.value) || 0)}
-                      className="w-full bg-white border border-deep-blue/10 rounded px-2 py-1 text-sm text-deep-blue outline-none focus:border-lime-ia"
+                      className="premium-input py-2 text-sm"
                     />
                   </div>
-                  <div className="w-20">
-                    <label className="block text-[10px] uppercase font-bold text-deep-blue/40 mb-1">Qté</label>
+                  <div className="w-24">
+                    <label className="premium-label">Qté</label>
                     <input 
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 0)}
-                      className="w-full bg-white border border-deep-blue/10 rounded px-2 py-1 text-sm text-deep-blue outline-none focus:border-lime-ia"
+                      className="premium-input py-2 text-sm"
                     />
                   </div>
                   <div className="w-32 text-right">
-                    <label className="block text-[10px] uppercase font-bold text-deep-blue/40 mb-1">Total</label>
-                    <p className="text-sm font-bold text-deep-blue py-1">{item.total.toLocaleString()} FCFA</p>
+                    <label className="premium-label">Total</label>
+                    <p className="text-sm font-bold text-deep-blue py-2">{item.total.toLocaleString()} FCFA</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
             {items.length === 0 && (
-              <p className="text-center py-8 text-deep-blue/20 text-sm italic">Aucun article ajouté</p>
+              <div className="text-center py-12 border-2 border-dashed border-deep-blue/5 rounded-2xl">
+                <FileCheck size={40} className="mx-auto text-deep-blue/10 mb-3" />
+                <p className="text-deep-blue/30 text-sm font-medium">Aucun article ajouté au document</p>
+              </div>
             )}
           </div>
         </div>
@@ -297,15 +407,17 @@ export const InvoiceGenerator: React.FC = () => {
 
           {/* Client Info */}
           <div className="mb-12 grid grid-cols-2 gap-8">
-            <div className="bg-slate-50 p-4 rounded-lg border-l-4 border-lime-ia">
+            <div className="bg-slate-50 p-5 rounded-xl border-l-4 border-lime-ia">
               <p className="text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Facturé à</p>
-              <p className="font-bold text-lg text-deep-blue">{clientName || 'Client Nom'}</p>
-              <p className="text-xs text-slate-500 mt-1 italic">Partenaire Stratégique Doulia</p>
+              <p className="font-bold text-lg text-deep-blue leading-tight mb-1">{clientName || 'Client Nom'}</p>
+              {clientPhone && <p className="text-xs text-slate-600 flex items-center gap-1.5 mb-1"><Phone size={10} /> {clientPhone}</p>}
+              {clientAddress && <p className="text-xs text-slate-500 flex items-start gap-1.5"><MapPin size={10} className="mt-0.5 shrink-0" /> {clientAddress}</p>}
+              {taxId && <p className="text-[10px] font-bold text-deep-blue/40 mt-2">NIU: {taxId}</p>}
             </div>
-            <div className="p-4">
-              <p className="text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Mode de Paiement</p>
-              <p className="text-sm font-bold text-deep-blue">{paymentMethod}</p>
-              <p className="text-[10px] text-slate-500 mt-1">Conditions: {paymentTerms}</p>
+            <div className="p-5">
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Détails de Paiement</p>
+              <p className="text-sm font-bold text-deep-blue mb-1">{paymentMethod}</p>
+              <p className="text-[11px] text-slate-600 font-medium">Conditions: <span className="text-deep-blue">{paymentTerms}</span></p>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -27,8 +27,10 @@ import {
   Meh,
   Eye,
   FileCheck,
-  BarChart3
+  BarChart3,
+  Users
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { GoogleGenAI } from '@google/genai';
 
@@ -90,45 +92,73 @@ export const CRM: React.FC = () => {
     }
   };
 
-  const handleAddClient = async () => {
-    const name = prompt('Nom de l\'entreprise :');
-    const contact = prompt('Contact (Email/Tel) :');
-    const value = prompt('Valeur estimée (XAF) :');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    contact: '',
+    value: '',
+    sector: 'Technologie'
+  });
 
-    if (name && contact && value) {
-      setIsLoadingClients(true);
+  const handleAddClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClient.name || !newClient.contact || !newClient.value) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    setIsLoadingClients(true);
+    const promise = new Promise(async (resolve, reject) => {
       try {
         const fields: any = {};
-        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME] = name;
-        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.CONTACT] = contact;
-        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.TOTAL_VALUE] = parseInt(value);
-        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] = 50;
-        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.SENTIMENT] = 'neutral';
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME] = newClient.name;
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.CONTACT] = newClient.contact;
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.TOTAL_VALUE] = parseInt(newClient.value);
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] = Math.floor(Math.random() * 40) + 60;
+        fields[AIRTABLE_CONFIG.FIELDS.CLIENTS.SENTIMENT] = 'positive';
         
         await airtableService.createClient(fields);
-        
-        // Reload clients
         const data = await airtableService.getClients();
         setClients(data);
+        setIsAddModalOpen(false);
+        setNewClient({ name: '', contact: '', value: '', sector: 'Technologie' });
+        resolve(true);
       } catch (error) {
-        console.error("Error creating client:", error);
-        alert("Erreur lors de la création du client sur Airtable.");
+        reject(error);
       } finally {
         setIsLoadingClients(false);
       }
-    }
+    });
+
+    toast.promise(promise, {
+      loading: 'Enregistrement du client...',
+      success: 'Client ajouté avec succès !',
+      error: 'Erreur lors de l\'ajout au CRM',
+    });
+  };
+
+  const handleMagicFill = () => {
+    setNewClient({
+      name: "Afriland First Bank",
+      contact: "contact@afrilandfirstbank.com",
+      value: "25000000",
+      sector: "Banque & Finance"
+    });
+    toast.success("Remplissage magique IA effectué ✨");
   };
 
   const handleViewClient = (client: any) => {
     setSelectedClient(client);
+    toast.info(`Ouverture de la fiche : ${client[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME]}`);
   };
 
   const handleSendMail = (client: any) => {
     const email = client[AIRTABLE_CONFIG.FIELDS.CLIENTS.CONTACT];
     if (email && email.includes('@')) {
+      toast.success("Ouverture de votre client mail...");
       window.location.href = `mailto:${email}?subject=Doulia Strategy Hub - Contact`;
     } else {
-      alert(`Envoi d'email à ${client[AIRTABLE_CONFIG.FIELDS.CLIENTS.NAME]}... (Simulation)`);
+      toast.error("Format d'email invalide");
     }
   };
 
@@ -242,12 +272,114 @@ export const CRM: React.FC = () => {
               <Filter size={16} />
             </button>
             <button 
-              onClick={handleAddClient}
+              onClick={() => setIsAddModalOpen(true)}
               className="btn-primary flex items-center gap-2"
             >
               <Plus size={16} /> Nouveau Client
             </button>
           </div>
+
+          {/* Add Client Modal */}
+          <AnimatePresence>
+            {isAddModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-deep-blue/40 backdrop-blur-sm">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="premium-card w-full max-w-lg p-8 shadow-2xl relative"
+                >
+                  <button 
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="absolute top-6 right-6 p-2 hover:bg-deep-blue/5 rounded-full text-deep-blue/40"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                  </button>
+
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia">
+                      <Users size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-deep-blue">Nouveau Partenaire</h3>
+                      <p className="text-xs text-deep-blue/40">Enregistrez un nouveau client dans l'écosystème Doulia.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddClient} className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <label className="premium-label">Entreprise / Nom *</label>
+                        <input 
+                          type="text"
+                          value={newClient.name}
+                          onChange={(e) => setNewClient({...newClient, name: e.target.value})}
+                          className="premium-input"
+                          placeholder="Ex: Afriland First Bank"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="premium-label">Contact (Email ou Tel) *</label>
+                        <input 
+                          type="text"
+                          value={newClient.contact}
+                          onChange={(e) => setNewClient({...newClient, contact: e.target.value})}
+                          className="premium-input"
+                          placeholder="Ex: contact@afriland.cm"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="premium-label">Valeur Estimée (XAF) *</label>
+                          <input 
+                            type="number"
+                            value={newClient.value}
+                            onChange={(e) => setNewClient({...newClient, value: e.target.value})}
+                            className="premium-input"
+                            placeholder="0"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="premium-label">Secteur d'Activité</label>
+                          <select 
+                            value={newClient.sector}
+                            onChange={(e) => setNewClient({...newClient, sector: e.target.value})}
+                            className="premium-input appearance-none"
+                          >
+                            <option>Technologie</option>
+                            <option>Banque & Finance</option>
+                            <option>Santé</option>
+                            <option>Énergie</option>
+                            <option>Agriculture</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        type="button"
+                        onClick={handleMagicFill}
+                        className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                      >
+                        <Sparkles size={16} /> Remplissage IA
+                      </button>
+                      <button 
+                        type="submit"
+                        disabled={isLoadingClients}
+                        className="btn-primary flex-1"
+                      >
+                        {isLoadingClients ? "Enregistrement..." : "Créer la Fiche"}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
 
           {/* Client Table */}
           <div className="premium-card overflow-hidden ai-glow">

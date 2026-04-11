@@ -9,6 +9,7 @@ import { Projects } from './components/Projects';
 import { Budget } from './components/Budget';
 import { AICatalog } from './components/AICatalog';
 import { motion, AnimatePresence } from 'motion/react';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -71,6 +72,9 @@ export default function App() {
 
       {/* Floating Chatbot */}
       <Chatbot />
+
+      {/* Global Notifications */}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

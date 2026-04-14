@@ -77,7 +77,12 @@ export const CRM: React.FC = () => {
       const prompt = `Tu es un expert en marketing digital pour le marché camerounais. 
       Rédige un post de réseau social percutant basé sur ce brief : "${brief}".
       Le ton doit être professionnel, innovant et engageant. 
-      Inclus des emojis pertinents et des hashtags adaptés au contexte camerounais et tech.`;
+      Inclus des emojis pertinents et des hashtags adaptés au contexte camerounais et tech.
+      
+      Directives de rendu (STRICTES) :
+      1. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
+      2. FORMATAGE : Utilise le gras (**) pour les mots-clés et les titres. NE JAMAIS UTILISER DE BALISES HTML OU D'ASTÉRISQUES (*) POUR LES LISTES (utilise des chiffres ou des tirets).
+      3. LANGUE : Français uniquement.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",

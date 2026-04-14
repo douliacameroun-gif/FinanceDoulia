@@ -129,7 +129,7 @@ export const Chatbot: React.FC = () => {
           2. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
           3. LISTES NUMÉROTÉES : Utilise des listes numérotées (1., 2., etc.) pour les étapes ou les énumérations.
           4. OPPORTUNITÉS : À la fin de CHAQUE réponse, ajoute une section intitulée "**Opportunités Doulia**" où tu proposes des offres de services, des idées marketing ou des opportunités de marché spécifiques pour Doulia basées sur la discussion et les données.
-          5. FORMATAGE : Utilise le gras (**) pour les mots-clés. NE JAMAIS UTILISER DE BALISES HTML.
+          5. FORMATAGE : Utilise le gras (**) pour les mots-clés et les titres. NE JAMAIS UTILISER DE BALISES HTML OU D'ASTÉRISQUES (*) POUR LES LISTES.
           6. LANGUE : Français uniquement.`,
         }
       });

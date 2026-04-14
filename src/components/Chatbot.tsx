@@ -5,11 +5,25 @@ import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
+import { airtableService } from '../lib/airtable';
+import { AIRTABLE_CONFIG } from '../lib/schema';
 
 interface Message {
   role: 'user' | 'bot';
   content: string;
 }
+
+const mapAirtableData = (data: any[], tableFields: any) => {
+  return data.map(record => {
+    const mapped: any = { id: record.id };
+    Object.entries(tableFields).forEach(([key, id]) => {
+      if (record[id as string] !== undefined) {
+        mapped[key] = record[id as string];
+      }
+    });
+    return mapped;
+  });
+};
 
 export const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -68,9 +82,34 @@ export const Chatbot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const searchResults = await searchWeb(userMessage);
+      // Fetch both web search results and Airtable business data in parallel
+      const [searchResults, businessData] = await Promise.all([
+        searchWeb(userMessage),
+        Promise.all([
+          airtableService.getClients(),
+          airtableService.getProjects(),
+          airtableService.getBudgets(),
+          airtableService.getInvoices()
+        ])
+      ]);
+
+      const [clients, projects, budgets, invoices] = businessData;
       
-      const ai = new GoogleGenAI({ apiKey: process.env.DOULIA_GEMINI_KEY || process.env.GEMINI_API_KEY || '' });
+      // Map Airtable data to readable names for the AI
+      const mappedClients = mapAirtableData(clients, AIRTABLE_CONFIG.FIELDS.CLIENTS);
+      const mappedProjects = mapAirtableData(projects, AIRTABLE_CONFIG.FIELDS.PROJECTS);
+      const mappedBudgets = mapAirtableData(budgets, AIRTABLE_CONFIG.FIELDS.BUDGETS);
+      const mappedInvoices = mapAirtableData(invoices, AIRTABLE_CONFIG.FIELDS.INVOICES);
+
+      const businessContext = `
+      CONTEXTE BUSINESS RÉEL (AIRTABLE) :
+      - Clients : ${JSON.stringify(mappedClients)}
+      - Projets : ${JSON.stringify(mappedProjects)}
+      - Budgets : ${JSON.stringify(mappedBudgets)}
+      - Factures : ${JSON.stringify(mappedInvoices)}
+      `;
+      
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{ role: 'user', parts: [{ text: userMessage }] }],
@@ -78,25 +117,20 @@ export const Chatbot: React.FC = () => {
           systemInstruction: `Tu es l'expert Doulia, aide à la décision sur le marché Camerounais. 
           Personnalité : Expert-comptable, stratège commercial, et spécialiste du marché camerounais.
           Mission : Accompagner les entreprises camerounaises dans leur transformation numérique et optimisation financière via l'IA.
-          Site Web de référence : https://douliacameroun-825a6.web.app/ (Doulia est le leader local de l'IA appliquée à la finance et au CRM).
           
-          Contexte de l'application :
-          - Dashboard : Suivi du MRR, clients actifs, devis en attente, projets.
-          - Projets : Gestion des cycles de vie des projets avec suivi IA.
-          - Budget : Analyse des dépenses et marge nette.
-          - CRM : Gestion de la relation client et insights prédictifs.
-          - Services : Solutions fixes (Doulia Connect, Doulia Insight, Doulia Process) et sur-mesure.
-          - ROI : Simulateur de gains financiers grâce à l'IA.
+          TU AS ACCÈS AUX DONNÉES RÉELLES DE L'ENTREPRISE CI-DESSOUS. ANALYSE-LES POUR RÉPONDRE PRÉCISÉMENT.
+          
+          ${businessContext}
           
           ${searchResults ? `Voici des informations récentes trouvées sur le web pour t'aider :\n${searchResults}` : ''}
           
           Directives de rendu (STRICTES) :
-          1. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
-          2. LISTES NUMÉROTÉES : Utilise des listes numérotées (1., 2., etc.) pour les étapes ou les énumérations.
-          3. OPPORTUNITÉS : À la fin de CHAQUE réponse, ajoute une section intitulée "**Opportunités Doulia**" où tu proposes des offres de services, des idées marketing ou des opportunités de marché spécifiques pour Doulia basées sur la discussion.
-          4. FORMATAGE : Utilise le gras (**) pour les mots-clés. NE JAMAIS UTILISER DE BALISES HTML.
-          5. LANGUE : Français uniquement.
-          6. POLICE : Inter (assuré par le CSS).`,
+          1. ANALYSE DE DONNÉES : Utilise les données Airtable fournies pour donner des chiffres précis (MRR, nombre de clients, état des projets, etc.) si la question le demande.
+          2. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
+          3. LISTES NUMÉROTÉES : Utilise des listes numérotées (1., 2., etc.) pour les étapes ou les énumérations.
+          4. OPPORTUNITÉS : À la fin de CHAQUE réponse, ajoute une section intitulée "**Opportunités Doulia**" où tu proposes des offres de services, des idées marketing ou des opportunités de marché spécifiques pour Doulia basées sur la discussion et les données.
+          5. FORMATAGE : Utilise le gras (**) pour les mots-clés. NE JAMAIS UTILISER DE BALISES HTML.
+          6. LANGUE : Français uniquement.`,
         }
       });
 

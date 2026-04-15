@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar } from 'lucide-react';
+import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar, History, Eye, RotateCcw } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { QRCodeSVG } from 'qrcode.react';
@@ -10,6 +10,21 @@ import { InvoiceItem } from '../lib/airtable-schema';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
 import { airtableService } from '../lib/airtable';
+
+interface HistoryEntry {
+  id: string;
+  type: 'invoice' | 'quote';
+  number: string;
+  clientName: string;
+  date: string;
+  total: number;
+  items: InvoiceItem[];
+  clientPhone: string;
+  clientAddress: string;
+  taxId: string;
+  paymentMethod: string;
+  paymentTerms: string;
+}
 
 export const InvoiceGenerator: React.FC = () => {
   const [items, setItems] = useState<InvoiceItem[]>([]);
@@ -23,8 +38,18 @@ export const InvoiceGenerator: React.FC = () => {
   const [invoiceNumber, setInvoiceNumber] = useState(`${docType === 'invoice' ? 'INV' : 'DEV'}-${Date.now().toString().slice(-6)}`);
   const [services, setServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   React.useEffect(() => {
+    const savedHistory = localStorage.getItem('doulia_doc_history');
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error("Failed to parse history", e);
+      }
+    }
+
     const loadServices = async () => {
       setIsLoading(true);
       const data = await airtableService.getServices();
@@ -76,11 +101,55 @@ export const InvoiceGenerator: React.FC = () => {
     return items.reduce((acc, item) => acc + item.total, 0);
   };
 
+  const saveToHistory = () => {
+    if (!clientName || items.length === 0) return;
+
+    const newEntry: HistoryEntry = {
+      id: Date.now().toString(),
+      type: docType,
+      number: invoiceNumber,
+      clientName,
+      date: new Date().toLocaleDateString(),
+      total: calculateTotal(),
+      items,
+      clientPhone,
+      clientAddress,
+      taxId,
+      paymentMethod,
+      paymentTerms
+    };
+
+    const updatedHistory = [newEntry, ...history].slice(0, 50); // Keep last 50
+    setHistory(updatedHistory);
+    localStorage.setItem('doulia_doc_history', JSON.stringify(updatedHistory));
+  };
+
+  const loadFromHistory = (entry: HistoryEntry) => {
+    setDocType(entry.type);
+    setInvoiceNumber(entry.number);
+    setClientName(entry.clientName);
+    setClientPhone(entry.clientPhone);
+    setClientAddress(entry.clientAddress);
+    setTaxId(entry.taxId);
+    setPaymentMethod(entry.paymentMethod);
+    setPaymentTerms(entry.paymentTerms);
+    setItems(entry.items);
+    toast.success(`Document ${entry.number} chargé !`);
+  };
+
+  const deleteFromHistory = (id: string) => {
+    const updatedHistory = history.filter(e => e.id !== id);
+    setHistory(updatedHistory);
+    localStorage.setItem('doulia_doc_history', JSON.stringify(updatedHistory));
+    toast.info("Document supprimé de l'historique");
+  };
+
   const handlePrint = () => {
     if (!clientName) {
       toast.error("Veuillez entrer le nom du client avant d'imprimer");
       return;
     }
+    saveToHistory();
     window.print();
   };
 
@@ -90,6 +159,7 @@ export const InvoiceGenerator: React.FC = () => {
       return;
     }
     
+    saveToHistory();
     const promise = new Promise(async (resolve, reject) => {
       try {
         const element = document.getElementById('invoice-preview');
@@ -360,6 +430,61 @@ export const InvoiceGenerator: React.FC = () => {
               <div className="text-center py-12 border-2 border-dashed border-deep-blue/5 rounded-2xl">
                 <FileCheck size={40} className="mx-auto text-deep-blue/10 mb-3" />
                 <p className="text-deep-blue/30 text-sm font-medium">Aucun article ajouté au document</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* History Section */}
+        <div className="premium-card p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <History size={20} className="text-deep-blue/40" />
+            <h3 className="text-sm font-bold uppercase text-deep-blue/40 tracking-widest">Historique Local</h3>
+          </div>
+          
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {history.length > 0 ? (
+              history.map((entry) => (
+                <div 
+                  key={entry.id}
+                  className="group flex items-center justify-between p-3 bg-cloud-gray/20 rounded-xl border border-deep-blue/5 hover:border-lime-ia/20 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black",
+                      entry.type === 'invoice' ? "bg-lime-ia text-deep-blue" : "bg-blue-500 text-white"
+                    )}>
+                      {entry.type === 'invoice' ? 'INV' : 'DEV'}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-deep-blue">{entry.clientName}</p>
+                      <p className="text-[9px] text-deep-blue/40 font-bold uppercase">{entry.number} • {entry.date}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-deep-blue mr-2">{entry.total.toLocaleString()} F</p>
+                    <button 
+                      onClick={() => loadFromHistory(entry)}
+                      className="p-1.5 hover:bg-lime-ia/10 rounded text-deep-blue/20 hover:text-lime-ia transition-colors"
+                      title="Charger"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                    <button 
+                      onClick={() => deleteFromHistory(entry.id)}
+                      className="p-1.5 hover:bg-red-500/10 rounded text-deep-blue/20 hover:text-red-500 transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 opacity-20">
+                <History size={32} className="mx-auto mb-2" />
+                <p className="text-[10px] font-bold uppercase tracking-widest">Aucun historique</p>
               </div>
             )}
           </div>

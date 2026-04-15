@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign } from 'lucide-react';
+import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign, BrainCircuit, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
+import { GoogleGenAI } from '@google/genai';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
 import { airtableService } from '../lib/airtable';
@@ -37,6 +38,7 @@ export const Projects: React.FC = () => {
   }, []);
 
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [newProject, setNewProject] = React.useState({
     name: '',
     client: '',
@@ -44,6 +46,50 @@ export const Projects: React.FC = () => {
     budget: '',
     description: ''
   });
+
+  const handleAIAnalyze = async () => {
+    if (!newProject.description.trim()) {
+      toast.error("Veuillez d'abord saisir une description pour l'analyse.");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const prompt = `En tant qu'expert Doulia Finance Hub, analyse ce brief de projet et propose une documentation structurée.
+      
+      BRIEF DU PROJET : "${newProject.description}"
+      
+      TON ANALYSE DOIT INCLURE :
+      1. PLAN DE STRUCTURATION : Les phases clés du projet.
+      2. SOLUTIONS IA DOULIA ADAPTÉES : Quelles solutions (Doulia Connect, Insight, Process) sont pertinentes.
+      3. APPROCHE D'OFFRE FINANCIÈRE : Une estimation stratégique de la valeur.
+      
+      Directives de rendu (STRICTES) :
+      - Utilise le gras (**) pour les titres et mots-clés.
+      - Utilise des listes numérotées.
+      - Pas d'astérisques (*) pour les listes.
+      - Pas de HTML.
+      - Langue : Français.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+
+      const analysis = response.text || "Erreur lors de l'analyse.";
+      setNewProject(prev => ({
+        ...prev,
+        description: prev.description + "\n\n--- DOCUMENTATION IA DOULIA ---\n\n" + analysis
+      }));
+      toast.success("Analyse IA terminée et ajoutée à la documentation !");
+    } catch (error) {
+      console.error("AI Analysis error:", error);
+      toast.error("Erreur lors de l'analyse IA.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,13 +276,24 @@ export const Projects: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="premium-label">Description / Brief</label>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="premium-label mb-0">Description / Brief</label>
+                          <button 
+                            type="button"
+                            onClick={handleAIAnalyze}
+                            disabled={isAnalyzing || !newProject.description.trim()}
+                            className="flex items-center gap-1.5 text-[10px] font-bold text-lime-ia hover:text-lime-ia/80 transition-colors disabled:opacity-50"
+                          >
+                            {isAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <BrainCircuit size={12} />}
+                            Analyse Stratégique IA
+                          </button>
+                        </div>
                         <div className="relative">
                           <FileText size={14} className="absolute left-4 top-4 text-deep-blue/30" />
                           <textarea 
                             value={newProject.description}
                             onChange={(e) => setNewProject({...newProject, description: e.target.value})}
-                            className="premium-input pl-10 min-h-[80px] resize-none"
+                            className="premium-input pl-10 min-h-[120px] resize-none"
                             placeholder="Objectifs principaux du projet..."
                           />
                         </div>

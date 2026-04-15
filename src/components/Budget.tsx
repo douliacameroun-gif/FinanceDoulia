@@ -53,12 +53,14 @@ export const Budget: React.FC = () => {
   }, []);
 
   const currentBudget = budgets[0] || {};
-  const totalExpenses = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_EXPENSES] as number || expenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const estimatedRevenue = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 8450000;
-  const netMargin = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.NET_MARGIN] as number || (estimatedRevenue - totalExpenses);
+  const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const estimatedRevenue = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 0;
+  const netMargin = estimatedRevenue - totalExpenses;
   const marginPercentage = estimatedRevenue > 0 ? (netMargin / estimatedRevenue) * 100 : 0;
 
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [newExpense, setNewExpense] = React.useState({
     label: '',
     amount: '',
@@ -72,11 +74,12 @@ export const Budget: React.FC = () => {
       return;
     }
 
+    const amount = parseInt(newExpense.amount);
     setExpenses(prev => [
       ...prev,
       { 
         label: newExpense.label, 
-        amount: parseInt(newExpense.amount), 
+        amount: amount, 
         category: newExpense.category, 
         icon: Wallet, 
         trend: 'stable' 
@@ -86,6 +89,61 @@ export const Budget: React.FC = () => {
     setIsAddModalOpen(false);
     setNewExpense({ label: '', amount: '', category: 'Technologie' });
     toast.success("Dépense ajoutée au budget local");
+  };
+
+  const handleEditExpenseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex === null || !newExpense.label || !newExpense.amount) return;
+
+    const amount = parseInt(newExpense.amount);
+    const newExp = [...expenses];
+    newExp[editingIndex] = { 
+      ...newExp[editingIndex], 
+      label: newExpense.label, 
+      amount: amount,
+      category: newExpense.category
+    };
+    setExpenses(newExp);
+    setIsEditModalOpen(false);
+    setEditingIndex(null);
+    setNewExpense({ label: '', amount: '', category: 'Technologie' });
+    toast.success("Charge mise à jour");
+  };
+
+  const handleEditExpense = (index: number) => {
+    const exp = expenses[index];
+    setEditingIndex(index);
+    setNewExpense({
+      label: exp.label,
+      amount: exp.amount.toString(),
+      category: exp.category
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const syncWithAirtable = async () => {
+    if (!budgets[0]?.id) {
+      toast.error("Aucun enregistrement budgétaire trouvé dans Airtable pour la synchronisation.");
+      return;
+    }
+
+    const localTotal = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+    setIsLoading(true);
+    try {
+      const fields: any = {};
+      fields[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_EXPENSES] = localTotal;
+      // Recalculate net margin
+      const revenue = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 0;
+      fields[AIRTABLE_CONFIG.FIELDS.BUDGETS.NET_MARGIN] = revenue - localTotal;
+
+      await airtableService.updateBudget(budgets[0].id, fields);
+      await loadBudgets();
+      toast.success("Budget synchronisé avec Airtable !");
+    } catch (error) {
+      toast.error("Erreur lors de la synchronisation");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const [allocation, setAllocation] = React.useState([
@@ -104,23 +162,6 @@ export const Budget: React.FC = () => {
       setAllocation(newAlloc);
       toast.success("Allocation mise à jour");
     }
-  };
-
-  const handleEditExpenseLine = (index: number) => {
-    const exp = expenses[index];
-    const newLabel = prompt("Nouveau libellé :", exp.label);
-    const newAmount = prompt("Nouveau montant (XAF) :", exp.amount.toString());
-    
-    if (newLabel && newAmount && !isNaN(parseInt(newAmount))) {
-      const newExp = [...expenses];
-      newExp[index] = { ...exp, label: newLabel, amount: parseInt(newAmount) };
-      setExpenses(newExp);
-      toast.success("Charge mise à jour");
-    }
-  };
-
-  const handleEditExpense = (index: number) => {
-    handleEditExpenseLine(index);
   };
 
   const handleEditInvoice = (index: number) => {
@@ -233,12 +274,21 @@ export const Budget: React.FC = () => {
               <p className="text-[10px] font-bold uppercase text-deep-blue/40 mb-1">Dépenses Totales / Mois</p>
               <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold text-deep-blue">{isLoading ? '...' : totalExpenses.toLocaleString()} XAF</h2>
-                <button 
-                  onClick={() => handleEditBudgetField(AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_EXPENSES, totalExpenses)}
-                  className="p-1.5 hover:bg-deep-blue/10 rounded text-deep-blue/20 hover:text-deep-blue transition-colors"
-                >
-                  <Edit2 size={14} />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={syncWithAirtable}
+                    className="p-1.5 hover:bg-lime-ia/10 rounded text-lime-ia/40 hover:text-lime-ia transition-colors"
+                    title="Synchroniser le total avec Airtable"
+                  >
+                    <RefreshCw size={14} className={cn(isLoading && "animate-spin")} />
+                  </button>
+                  <button 
+                    onClick={() => handleEditBudgetField(AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_EXPENSES, totalExpenses)}
+                    className="p-1.5 hover:bg-deep-blue/10 rounded text-deep-blue/20 hover:text-deep-blue transition-colors"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                </div>
               </div>
               <div className="mt-4 flex items-center gap-2 text-[10px] text-red-500 font-bold">
                 <ArrowUpRight size={12} /> +4.2% vs mois dernier
@@ -351,6 +401,90 @@ export const Budget: React.FC = () => {
                           className="btn-primary flex-1"
                         >
                           Enregistrer la dépense
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+
+              {isEditModalOpen && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-deep-blue/40 backdrop-blur-sm">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="premium-card w-full max-w-md p-8 shadow-2xl relative"
+                  >
+                    <button 
+                      onClick={() => {
+                        setIsEditModalOpen(false);
+                        setEditingIndex(null);
+                        setNewExpense({ label: '', amount: '', category: 'Technologie' });
+                      }}
+                      className="absolute top-6 right-6 p-2 hover:bg-deep-blue/5 rounded-full text-deep-blue/40"
+                    >
+                      <Plus size={20} className="rotate-45" />
+                    </button>
+
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia">
+                        <Edit2 size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-deep-blue">Modifier la Charge</h3>
+                        <p className="text-xs text-deep-blue/40">Mettez à jour les détails de cette dépense.</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleEditExpenseSubmit} className="space-y-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="premium-label">Libellé de la dépense *</label>
+                          <input 
+                            type="text"
+                            value={newExpense.label}
+                            onChange={(e) => setNewExpense({...newExpense, label: e.target.value})}
+                            className="premium-input"
+                            placeholder="Ex: Abonnement ChatGPT Team"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="premium-label">Montant (XAF) *</label>
+                          <div className="relative">
+                            <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30" />
+                            <input 
+                              type="number"
+                              value={newExpense.amount}
+                              onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                              className="premium-input pl-10"
+                              placeholder="0"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="premium-label">Catégorie</label>
+                          <select 
+                            value={newExpense.category}
+                            onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                            className="premium-input appearance-none"
+                          >
+                            <option>Technologie</option>
+                            <option>Infrastructure</option>
+                            <option>Opérations</option>
+                            <option>Croissance</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <button 
+                          type="submit"
+                          className="btn-primary flex-1"
+                        >
+                          Mettre à jour
                         </button>
                       </div>
                     </form>

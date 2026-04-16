@@ -11,7 +11,9 @@ import {
   Cpu,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  MessageSquare,
+  ListTodo
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -23,7 +25,9 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'chat-ia', label: 'Chat IA', icon: MessageSquare },
   { id: 'projets', label: 'Projets', icon: Briefcase },
+  { id: 'tasks', label: 'Tâches', icon: ListTodo },
   { id: 'budget', label: 'Budget', icon: Wallet },
   { id: 'crm', label: 'CRM', icon: Contact },
   { id: 'roi', label: 'Simulateur ROI', icon: Calculator },

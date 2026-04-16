@@ -2,6 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import airtableApp from "./api/airtable";
+import aiRouter from "./api/ai";
 
 async function startServer() {
   const app = express();
@@ -9,6 +10,7 @@ async function startServer() {
 
   // Use the airtable proxy app
   app.use(airtableApp);
+  app.use("/api/ai", aiRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

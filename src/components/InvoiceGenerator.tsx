@@ -616,23 +616,25 @@ export const InvoiceGenerator: React.FC = () => {
             {/* Signature & Digital Stamp */}
             <div className="relative flex flex-col items-center">
               {/* Digital Stamp (Cachet) */}
-              <div className="absolute -top-16 -right-8 w-36 h-36 rounded-full border-[3px] border-blue-800/20 flex items-center justify-center rotate-12 pointer-events-none mix-blend-multiply">
-                <div className="w-[130px] h-[130px] rounded-full border border-blue-800/30 flex flex-col items-center justify-center p-3 text-center relative">
+              <div className="absolute -top-12 right-0 w-40 h-40 rounded-full border-[4px] border-blue-900/30 flex items-center justify-center rotate-12 pointer-events-none z-10">
+                <div className="w-[140px] h-[140px] rounded-full border-2 border-dashed border-blue-900/20 flex flex-col items-center justify-center p-3 text-center relative bg-white/50 backdrop-blur-[1px]">
                   {/* Circular Text (Simulated) */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-full h-full rounded-full border border-dashed border-blue-800/10 animate-[spin_20s_linear_infinite]" />
+                    <div className="w-full h-full rounded-full border border-dashed border-blue-900/10 animate-[spin_20s_linear_infinite]" />
                   </div>
                   
                   <img 
                     src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
                     alt="Stamp Logo" 
-                    className="w-10 h-10 object-cover rounded-full mb-1.5 opacity-40 grayscale contrast-125"
+                    className="w-12 h-12 object-cover rounded-full mb-1.5 opacity-60 grayscale contrast-125"
+                    referrerPolicy="no-referrer"
                   />
-                  <p className="text-[8px] font-black text-blue-800/60 uppercase tracking-widest leading-none">DOULIA</p>
-                  <div className="h-px w-8 bg-blue-800/20 my-1" />
-                  <p className="text-[7px] font-bold text-blue-800/50 uppercase leading-tight">
+                  <p className="text-[9px] font-black text-blue-900/70 uppercase tracking-widest leading-none">DOULIA</p>
+                  <div className="h-px w-10 bg-blue-900/30 my-1" />
+                  <p className="text-[8px] font-bold text-blue-900/60 uppercase leading-tight">
                     Direction Générale<br/>Douala - Cameroun
                   </p>
+                  <p className="text-[6px] font-bold text-blue-900/40 mt-1 uppercase tracking-tighter">Approuvé le {new Date().toLocaleDateString()}</p>
                 </div>
               </div>
 

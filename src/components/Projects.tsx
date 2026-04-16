@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign, BrainCircuit, Loader2 } from 'lucide-react';
+import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign, BrainCircuit, Loader2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { GoogleGenAI } from '@google/genai';
@@ -23,6 +23,14 @@ export const Projects: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'list' | 'resources'>('list');
   const [projects, setProjects] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [selectedProject, setSelectedProject] = React.useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [resourceAllocation, setResourceAllocation] = React.useState([
+    { name: 'Dr. Samuel Eto\'o (Data Scientist)', load: 85, tasks: 4 },
+    { name: 'Ing. Marie Curie (ML Engineer)', load: 45, tasks: 2 },
+    { name: 'Dev. Steve Jobs (Fullstack)', load: 95, tasks: 6 },
+    { name: 'Arch. Nikola Tesla (Cloud)', load: 20, tasks: 1 },
+  ]);
 
   // Fetch projects from Airtable
   React.useEffect(() => {
@@ -137,6 +145,61 @@ export const Projects: React.FC = () => {
       description: "Mise en place d'un système de lecture automatique de factures avec scoring de risque."
     });
     toast.success("Remplissage magique IA effectué ✨");
+  };
+
+  const handleEditProject = (project: any) => {
+    setSelectedProject(project);
+    setNewProject({
+      name: project[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME] || '',
+      client: project[AIRTABLE_CONFIG.FIELDS.PROJECTS.CLIENT]?.[0] || '',
+      type: project[AIRTABLE_CONFIG.FIELDS.PROJECTS.TYPE] || 'Développement IA',
+      budget: project[AIRTABLE_CONFIG.FIELDS.PROJECTS.BUDGET]?.toString() || '',
+      description: project.description || '' // Assuming description is a field
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProject) return;
+
+    setIsLoading(true);
+    try {
+      const fields: any = {};
+      fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME] = newProject.name;
+      fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.TYPE] = newProject.type;
+      // Note: Client link update might need special handling depending on Airtable setup
+      
+      await airtableService.updateProject(selectedProject.id, fields);
+      const data = await airtableService.getProjects();
+      setProjects(data);
+      setIsEditModalOpen(false);
+      setSelectedProject(null);
+      setNewProject({ name: '', client: '', type: 'Développement IA', budget: '', description: '' });
+      toast.success("Projet mis à jour !");
+    } catch (error) {
+      console.error("Update project error:", error);
+      toast.error("Erreur lors de la mise à jour.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditResource = (index: number) => {
+    const expert = resourceAllocation[index];
+    const newLoad = prompt(`Nouvelle charge pour ${expert.name} (%) :`, expert.load.toString());
+    const newTasks = prompt(`Nombre de projets actifs :`, expert.tasks.toString());
+    
+    if (newLoad !== null && newTasks !== null) {
+      const updated = [...resourceAllocation];
+      updated[index] = {
+        ...expert,
+        load: parseInt(newLoad) || 0,
+        tasks: parseInt(newTasks) || 0
+      };
+      setResourceAllocation(updated);
+      toast.success("Allocation mise à jour !");
+    }
   };
 
   const handleViewDetails = (project: any) => {
@@ -322,6 +385,87 @@ export const Projects: React.FC = () => {
             )}
           </AnimatePresence>
 
+          {/* Edit Project Modal */}
+          <AnimatePresence>
+            {isEditModalOpen && (
+              <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-deep-blue/40 backdrop-blur-sm">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="premium-card w-full max-w-lg p-8 shadow-2xl relative"
+                >
+                  <button 
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="absolute top-6 right-6 p-2 hover:bg-deep-blue/5 rounded-full text-deep-blue/40"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                  </button>
+
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia">
+                      <Edit2 size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-deep-blue">Modifier le Projet</h3>
+                      <p className="text-xs text-deep-blue/40">Mettez à jour les paramètres de votre mission.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleUpdateProject} className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div>
+                        <label className="premium-label">Nom du Projet *</label>
+                        <input 
+                          type="text"
+                          value={newProject.name}
+                          onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                          className="premium-input"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="premium-label">Type de Projet</label>
+                          <select 
+                            value={newProject.type}
+                            onChange={(e) => setNewProject({...newProject, type: e.target.value})}
+                            className="premium-input appearance-none"
+                          >
+                            <option>Développement IA</option>
+                            <option>Audit Stratégique</option>
+                            <option>Cloud & Infra</option>
+                            <option>Formation</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="premium-label">Budget Estimé (XAF)</label>
+                          <input 
+                            type="number"
+                            value={newProject.budget}
+                            onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
+                            className="premium-input"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        type="submit"
+                        disabled={isLoading}
+                        className="btn-primary flex-1"
+                      >
+                        {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
           <div className="premium-card overflow-hidden ai-glow">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -386,16 +530,17 @@ export const Projects: React.FC = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 
+                        onClick={() => handleEditProject(project)}
+                        className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
                         onClick={() => handleViewDetails(project)}
                         className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-lime-ia transition-colors"
                       >
                         <ExternalLink size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleViewDetails(project)}
-                        className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors"
-                      >
-                        <MoreHorizontal size={16} />
                       </button>
                     </div>
                   </td>
@@ -415,13 +560,12 @@ export const Projects: React.FC = () => {
               Charge de Travail par Expert IA
             </h3>
             <div className="space-y-6">
-              {[
-                { name: 'Dr. Samuel Eto\'o (Data Scientist)', load: 85, tasks: 4 },
-                { name: 'Ing. Marie Curie (ML Engineer)', load: 45, tasks: 2 },
-                { name: 'Dev. Steve Jobs (Fullstack)', load: 95, tasks: 6 },
-                { name: 'Arch. Nikola Tesla (Cloud)', load: 20, tasks: 1 },
-              ].map((expert, i) => (
-                <div key={i} className="p-4 bg-cloud-gray/30 rounded-xl border border-deep-blue/5 group hover:border-lime-ia/30 transition-all">
+              {resourceAllocation.map((expert, i) => (
+                <div 
+                  key={i} 
+                  className="p-4 bg-cloud-gray/30 rounded-xl border border-deep-blue/5 group hover:border-lime-ia/30 transition-all cursor-pointer"
+                  onClick={() => handleEditResource(i)}
+                >
                   <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-lime-ia/10 flex items-center justify-center text-lime-ia font-bold text-[10px]">
@@ -429,12 +573,15 @@ export const Projects: React.FC = () => {
                       </div>
                       <span className="text-sm font-bold text-deep-blue">{expert.name}</span>
                     </div>
-                    <span className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                      expert.load > 90 ? "bg-red-500/10 text-red-500" : expert.load > 70 ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"
-                    )}>
-                      {expert.load}% Charge
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                        expert.load > 90 ? "bg-red-500/10 text-red-500" : expert.load > 70 ? "bg-amber-500/10 text-amber-500" : "bg-green-500/10 text-green-500"
+                      )}>
+                        {expert.load}% Charge
+                      </span>
+                      <Edit2 size={12} className="text-deep-blue/20 group-hover:text-deep-blue transition-colors" />
+                    </div>
                   </div>
                   <div className="w-full h-1.5 bg-deep-blue/5 rounded-full overflow-hidden">
                     <motion.div 

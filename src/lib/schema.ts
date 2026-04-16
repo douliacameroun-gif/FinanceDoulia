@@ -11,6 +11,8 @@ export const AIRTABLE_CONFIG = {
     PROJECTS: 'tblgX9gqTUCrWd1SU',
     SERVICES: 'tblOwFayoP73fMUHo',
     SOCIAL_POSTS: 'tblJhwTFYaTpgWOJH',
+    TASKS: 'tblTasks', // Task_Manager
+    VEILLE: 'tblVeille', // Veille_Stratégique
   },
   FIELDS: {
     CLIENTS: {
@@ -22,6 +24,20 @@ export const AIRTABLE_CONFIG = {
       AI_SCORE: 'fld4hnVSICC0fAMbX',
       SENTIMENT: 'fldAgNkrk6jwEkkdo',
       TOTAL_VALUE: 'fldCH8LcedPBvS14Q',
+    },
+    TASKS: {
+      TITLE: 'fldTaskTitle',
+      PROJECT: 'fldTaskProject',
+      DUE_DATE: 'fldTaskDueDate',
+      STATUS: 'fldTaskStatus',
+      PRIORITY: 'fldTaskPriority',
+    },
+    VEILLE: {
+      TITLE: 'fldVeilleTitle',
+      CONTENT: 'fldVeilleContent',
+      SOURCE: 'fldVeilleSource',
+      DATE: 'fldVeilleDate',
+      OPPORTUNITIES: 'fldVeilleOpp',
     },
     PROJECTS: {
       NAME: 'fldl7TzK5MTL94uP8',

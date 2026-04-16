@@ -70,11 +70,14 @@ export const airtableService = {
   getBudgets: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.BUDGETS),
   getServices: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SERVICES),
   getSocialPosts: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SOCIAL_POSTS),
+  getTasks: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.TASKS),
   updateBudget: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.BUDGETS, id, fields),
   updateInvoice: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.INVOICES, id, fields),
   createProject: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, fields),
+  updateProject: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, id, fields),
   createClient: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, fields),
   updateClient: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, id, fields),
+  createSocialPost: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.SOCIAL_POSTS, fields),
   testConnection: async () => {
     try {
       const response = await fetch(`/api/airtable/${AIRTABLE_CONFIG.TABLES.BUDGETS}`);

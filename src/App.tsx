@@ -8,6 +8,8 @@ import { ROISimulator } from './components/ROISimulator';
 import { Projects } from './components/Projects';
 import { Budget } from './components/Budget';
 import { AICatalog } from './components/AICatalog';
+import { AIChat } from './components/AIChat';
+import { Tasks } from './components/Tasks';
 import { LoginPortal } from './components/LoginPortal';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
@@ -53,6 +55,10 @@ export default function App() {
         return <InvoiceGenerator />;
       case 'catalogue':
         return <AICatalog />;
+      case 'chat-ia':
+        return <AIChat />;
+      case 'tasks':
+        return <Tasks />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-12">

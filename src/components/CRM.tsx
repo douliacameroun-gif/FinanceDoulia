@@ -54,6 +54,8 @@ export const CRM: React.FC = () => {
   const [generatedContent, setGeneratedContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['linkedin']);
+  const [veilleResults, setVeilleResults] = useState<any[]>([]);
+  const [isVeilleLoading, setIsVeilleLoading] = useState(false);
 
   // Fetch clients from Airtable
   React.useEffect(() => {
@@ -206,6 +208,77 @@ export const CRM: React.FC = () => {
     setSelectedPlatforms(prev => 
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
     );
+  };
+
+  const handleVeilleMediatrique = async () => {
+    setIsVeilleLoading(true);
+    const toastId = toast.loading("Lancement de la veille stratégique IA...");
+    
+    try {
+      const query = "actualités marché IA Cameroun Afrique monde concurrents Doulia Finance Hub opportunités";
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: process.env.TAVILY_KEY,
+          query: query,
+          search_depth: "advanced",
+          include_answer: true,
+          max_results: 5
+        })
+      });
+
+      if (!response.ok) throw new Error("Erreur Tavily API");
+      
+      const data = await response.json();
+      const results = data.results || [];
+      
+      // Process results with Gemini to get summary and opportunities
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const processedResults = await Promise.all(results.map(async (res: any) => {
+        const prompt = `Analyse cet article pour DOULIA (société de conseil en IA au Cameroun).
+        ARTICLE: ${res.title} - ${res.content}
+        
+        FOURNIS :
+        1. UN RÉSUMÉ (2 phrases)
+        2. OPPORTUNITÉS POUR DOULIA (1 phrase)
+        
+        Formatage : Gras (**) pour les mots clés. Pas de HTML.`;
+        
+        const aiRes = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        });
+        
+        const analysis = aiRes.text || "";
+        const [summary, opportunities] = analysis.split('\n\n');
+
+        // Save to Airtable (SOCIAL_POSTS as a temporary storage for monitoring)
+        const fields: any = {};
+        fields[AIRTABLE_CONFIG.FIELDS.SOCIAL_POSTS.CONTENT] = `${res.title}\n\nLien: ${res.url}\n\n${analysis}`;
+        fields[AIRTABLE_CONFIG.FIELDS.SOCIAL_POSTS.PLATFORM] = 'Veille';
+        fields[AIRTABLE_CONFIG.FIELDS.SOCIAL_POSTS.STATUS] = 'Publié';
+        fields[AIRTABLE_CONFIG.FIELDS.SOCIAL_POSTS.AI_BRIEF] = analysis;
+        
+        await airtableService.createSocialPost(fields);
+
+        return {
+          title: res.title,
+          url: res.url,
+          summary: summary || analysis,
+          opportunities: opportunities || "Analyse en cours...",
+          time: "À l'instant"
+        };
+      }));
+
+      setVeilleResults(processedResults);
+      toast.success("Veille terminée et sauvegardée dans Airtable !", { id: toastId });
+    } catch (error) {
+      console.error("Veille error:", error);
+      toast.error("Erreur lors de la veille médiatique.", { id: toastId });
+    } finally {
+      setIsVeilleLoading(false);
+    }
   };
 
   return (
@@ -695,27 +768,70 @@ export const CRM: React.FC = () => {
           {/* Media Monitoring */}
           <div className="space-y-6">
             <div className="premium-card p-6 h-full">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-deep-blue">
-                <Zap size={20} className="text-lime-ia" />
-                Veille Médiatique
-              </h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-deep-blue">
+                  <Zap size={20} className={cn("text-lime-ia", isVeilleLoading && "animate-pulse")} />
+                  Veille Médiatique
+                </h3>
+                <button 
+                  onClick={handleVeilleMediatrique}
+                  disabled={isVeilleLoading}
+                  className="p-2 hover:bg-lime-ia/10 rounded-lg text-lime-ia transition-all"
+                  title="Lancer la veille"
+                >
+                  <TrendingUp size={18} className={cn(isVeilleLoading && "animate-spin")} />
+                </button>
+              </div>
               <div className="space-y-6">
-                {[
-                  { title: "Hausse du taux directeur BEAC", source: "EcoMatin", time: "Il y a 2h" },
-                  { title: "Nouvelle régulation Fintech", source: "Investir au Cameroun", time: "Il y a 5h" },
-                  { title: "Doulia Connect v2.0 lancé", source: "Doulia News", time: "Hier" },
-                ].map((news, i) => (
-                  <div key={i} className="relative pl-4 border-l-2 border-lime-ia/30">
-                    <p className="text-sm font-medium text-deep-blue hover:text-lime-ia cursor-pointer transition-colors">{news.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-bold uppercase text-deep-blue/20">{news.source}</span>
-                      <span className="text-[10px] text-deep-blue/20">•</span>
-                      <span className="text-[10px] text-deep-blue/20">{news.time}</span>
+                {veilleResults.length > 0 ? (
+                  veilleResults.map((news, i) => (
+                    <div key={i} className="relative pl-4 border-l-2 border-lime-ia/30 group">
+                      <a 
+                        href={news.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm font-bold text-deep-blue hover:text-lime-ia cursor-pointer transition-colors block mb-1"
+                      >
+                        {news.title}
+                      </a>
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-deep-blue/60 leading-relaxed">{news.summary}</p>
+                        <div className="p-2 bg-lime-ia/5 rounded border border-lime-ia/10">
+                          <p className="text-[9px] font-bold text-lime-ia uppercase mb-1">Opportunités Doulia</p>
+                          <p className="text-[10px] text-deep-blue/80 italic">{news.opportunities}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] font-bold uppercase text-deep-blue/20">Source Web</span>
+                        <span className="text-[10px] text-deep-blue/20">•</span>
+                        <span className="text-[10px] text-deep-blue/20">{news.time}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <button className="w-full py-2 text-xs font-bold text-lime-ia hover:bg-lime-ia/5 rounded-lg transition-colors">
-                  Voir tout le flux
+                  ))
+                ) : (
+                  <>
+                    {[
+                      { title: "Hausse du taux directeur BEAC", source: "EcoMatin", time: "Il y a 2h" },
+                      { title: "Nouvelle régulation Fintech", source: "Investir au Cameroun", time: "Il y a 5h" },
+                      { title: "Doulia Connect v2.0 lancé", source: "Doulia News", time: "Hier" },
+                    ].map((news, i) => (
+                      <div key={i} className="relative pl-4 border-l-2 border-lime-ia/30">
+                        <p className="text-sm font-medium text-deep-blue hover:text-lime-ia cursor-pointer transition-colors">{news.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-bold uppercase text-deep-blue/20">{news.source}</span>
+                          <span className="text-[10px] text-deep-blue/20">•</span>
+                          <span className="text-[10px] text-deep-blue/20">{news.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                <button 
+                  onClick={handleVeilleMediatrique}
+                  disabled={isVeilleLoading}
+                  className="w-full py-2 text-xs font-bold text-lime-ia hover:bg-lime-ia/5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  {isVeilleLoading ? "Analyse en cours..." : "Actualiser la veille IA"}
                 </button>
               </div>
             </div>

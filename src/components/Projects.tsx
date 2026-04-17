@@ -25,12 +25,19 @@ export const Projects: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [resourceAllocation, setResourceAllocation] = React.useState([
-    { name: 'Dr. Samuel Eto\'o (Data Scientist)', load: 85, tasks: 4 },
-    { name: 'Ing. Marie Curie (ML Engineer)', load: 45, tasks: 2 },
-    { name: 'Dev. Steve Jobs (Fullstack)', load: 95, tasks: 6 },
-    { name: 'Arch. Nikola Tesla (Cloud)', load: 20, tasks: 1 },
-  ]);
+  const [resourceAllocation, setResourceAllocation] = useState(() => {
+    const saved = localStorage.getItem('doulia_resources');
+    return saved ? JSON.parse(saved) : [
+      { name: 'Dr. Samuel Eto\'o (Data Scientist)', load: 85, tasks: 4 },
+      { name: 'Ing. Marie Curie (ML Engineer)', load: 45, tasks: 2 },
+      { name: 'Dev. Steve Jobs (Fullstack)', load: 95, tasks: 6 },
+      { name: 'Arch. Nikola Tesla (Cloud)', load: 20, tasks: 1 },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('doulia_resources', JSON.stringify(resourceAllocation));
+  }, [resourceAllocation]);
 
   // Fetch projects from Airtable
   React.useEffect(() => {
@@ -114,7 +121,7 @@ export const Projects: React.FC = () => {
         fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.CLIENT] = [newProject.client];
         fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.TYPE] = newProject.type;
         fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.STATUS] = 'En cours';
-        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS] = 0;
+        fields[AIRTABLE_CONFIG.FIELDS.PROJECTS.PROGRESS] = 0;
         
         await airtableService.createProject(fields);
         const data = await airtableService.getProjects();
@@ -203,7 +210,7 @@ export const Projects: React.FC = () => {
   };
 
   const handleViewDetails = (project: any) => {
-    toast.info(`Détails : ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME]} (${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS]}%)`);
+    toast.info(`Détails : ${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME]} (${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.PROGRESS]}%)`);
   };
 
   return (
@@ -517,14 +524,14 @@ export const Projects: React.FC = () => {
                       <div className="flex-1 h-1 bg-deep-blue/5 rounded-full overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }}
-                          animate={{ width: `${project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS] || 0}%` }}
+                          animate={{ width: `${Number(project[AIRTABLE_CONFIG.FIELDS.PROJECTS.PROGRESS]) || 0}%` }}
                           className={cn(
                             "h-full rounded-full",
-                            project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS] === 100 ? "bg-green-500" : "bg-lime-ia"
+                            Number(project[AIRTABLE_CONFIG.FIELDS.PROJECTS.PROGRESS]) === 100 ? "bg-green-500" : "bg-lime-ia"
                           )}
                         />
                       </div>
-                      <span className="text-[10px] font-bold text-deep-blue/40">{project[AIRTABLE_CONFIG.FIELDS.PROJECTS.AI_PROGRESS] || 0}%</span>
+                      <span className="text-[10px] font-bold text-deep-blue/40">{Number(project[AIRTABLE_CONFIG.FIELDS.PROJECTS.PROGRESS]) || 0}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">

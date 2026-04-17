@@ -9,7 +9,9 @@ import { Projects } from './components/Projects';
 import { Budget } from './components/Budget';
 import { AICatalog } from './components/AICatalog';
 import { AIChat } from './components/AIChat';
+import { Veille } from './components/Veille';
 import { Tasks } from './components/Tasks';
+import { Settings } from './components/Settings';
 import { LoginPortal } from './components/LoginPortal';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
@@ -59,6 +61,10 @@ export default function App() {
         return <AIChat />;
       case 'tasks':
         return <Tasks />;
+      case 'veille':
+        return <Veille />;
+      case 'settings':
+        return <Settings />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-12">

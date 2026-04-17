@@ -95,7 +95,7 @@ export const Dashboard: React.FC = () => {
         const latestBudget = budgets[0] || {};
         
         setStats({
-          mrr: latestBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 0,
+          mrr: Number(latestBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE]) || 0,
           clients: clients.length,
           invoices: invoices.filter(inv => inv[AIRTABLE_CONFIG.FIELDS.INVOICES.STATUS] === 'Brouillon').length,
           projects: projects.filter(p => p[AIRTABLE_CONFIG.FIELDS.PROJECTS.STATUS] === 'En cours').length
@@ -181,7 +181,7 @@ export const Dashboard: React.FC = () => {
                 ]);
                 const latestBudget = budgets[0] || {};
                 setStats({
-                  mrr: latestBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 0,
+                  mrr: Number(latestBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE]) || 0,
                   clients: clients.length,
                   invoices: invoices.filter(inv => inv[AIRTABLE_CONFIG.FIELDS.INVOICES.STATUS] === 'Brouillon').length,
                   projects: projects.filter(p => p[AIRTABLE_CONFIG.FIELDS.PROJECTS.STATUS] === 'En cours').length

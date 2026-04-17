@@ -13,7 +13,9 @@ import {
   ChevronRight,
   LogOut,
   MessageSquare,
-  ListTodo
+  ListTodo,
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -28,11 +30,13 @@ const menuItems = [
   { id: 'chat-ia', label: 'Chat IA', icon: MessageSquare },
   { id: 'projets', label: 'Projets', icon: Briefcase },
   { id: 'tasks', label: 'Tâches', icon: ListTodo },
+  { id: 'veille', label: 'Veille', icon: TrendingUp },
   { id: 'budget', label: 'Budget', icon: Wallet },
   { id: 'crm', label: 'CRM', icon: Contact },
   { id: 'roi', label: 'Simulateur ROI', icon: Calculator },
   { id: 'invoices', label: 'Devis & Factures', icon: FileText },
   { id: 'catalogue', label: 'Catalogue IA', icon: Cpu },
+  { id: 'settings', label: 'Paramètres', icon: Settings },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) => {
@@ -60,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogo
                 className="h-14 w-14 rounded-xl object-cover border border-lime-ia/30 shadow-[0_0_15px_rgba(131,197,1,0.2)]"
                 referrerPolicy="no-referrer"
               />
-              <span className="font-display font-bold text-lg tracking-tighter text-white">DOULIA</span>
+              <span className="font-display font-black text-2xl tracking-tighter text-white">DOULIA</span>
             </motion.div>
           )}
         </AnimatePresence>

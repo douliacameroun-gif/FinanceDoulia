@@ -53,8 +53,8 @@ export const Budget: React.FC = () => {
   }, []);
 
   const currentBudget = budgets[0] || {};
-  const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const estimatedRevenue = currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE] as number || 0;
+  const totalExpenses = expenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const estimatedRevenue = Number(currentBudget[AIRTABLE_CONFIG.FIELDS.BUDGETS.TOTAL_REVENUE]) || 0;
   const netMargin = estimatedRevenue - totalExpenses;
   const marginPercentage = estimatedRevenue > 0 ? (netMargin / estimatedRevenue) * 100 : 0;
 

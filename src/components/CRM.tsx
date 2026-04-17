@@ -533,12 +533,12 @@ export const CRM: React.FC = () => {
                           <div 
                             className={cn(
                               "h-full rounded-full",
-                              (client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] as number) > 80 ? "bg-lime-ia" : (client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] as number) > 50 ? "bg-amber-500" : "bg-red-500"
+                              (Number(client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE]) || 0) > 80 ? "bg-lime-ia" : (Number(client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE]) || 0) > 50 ? "bg-amber-500" : "bg-red-500"
                             )}
-                            style={{ width: `${client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] || 0}%` }}
+                            style={{ width: `${Number(client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE]) || 0}%` }}
                           />
                         </div>
-                        <span className="text-[10px] font-bold text-deep-blue/60">{client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE] || 0}%</span>
+                        <span className="text-[10px] font-bold text-deep-blue/60">{Number(client[AIRTABLE_CONFIG.FIELDS.CLIENTS.AI_SCORE]) || 0}%</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

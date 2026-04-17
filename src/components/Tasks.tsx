@@ -34,6 +34,7 @@ export const Tasks: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [newTask, setNewTask] = useState({
@@ -66,13 +67,18 @@ export const Tasks: React.FC = () => {
 
   const calculatePriorityScore = (task: Task) => {
     const project = projects.find(p => p.id === task[AIRTABLE_CONFIG.FIELDS.TASKS.PROJECT]?.[0]);
-    const budget = project ? (project[AIRTABLE_CONFIG.FIELDS.PROJECTS.BUDGET] || 0) : 0;
+    const budget = project ? (Number(project[AIRTABLE_CONFIG.FIELDS.PROJECTS.BUDGET]) || 0) : 0;
     
     // Budget weight: 1 point per 1M XAF
     const budgetScore = budget / 1000000;
     
     // Urgency weight: Days remaining
-    const dueDate = new Date(task[AIRTABLE_CONFIG.FIELDS.TASKS.DUE_DATE]);
+    const dueDateStr = task[AIRTABLE_CONFIG.FIELDS.TASKS.DUE_DATE];
+    if (!dueDateStr) return Math.min(100, Math.round(budgetScore) || 0);
+
+    const dueDate = new Date(dueDateStr);
+    if (isNaN(dueDate.getTime())) return Math.min(100, Math.round(budgetScore) || 0);
+
     const today = new Date();
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -80,11 +86,41 @@ export const Tasks: React.FC = () => {
     // Urgency score: 50 points if due today, decreasing as days increase
     const urgencyScore = Math.max(0, 50 - diffDays);
     
-    const totalScore = Math.min(100, budgetScore + urgencyScore);
-    return Math.round(totalScore);
+    const totalScore = (budgetScore || 0) + (urgencyScore || 0);
+    const rounded = Math.round(totalScore);
+    return isNaN(rounded) ? 0 : Math.min(100, rounded);
   };
 
-  const sortedTasks = [...tasks].sort((a, b) => {
+  const toggleStatus = async (taskId: string, currentStatus: string) => {
+    const statuses = ['À faire', 'En cours', 'Terminé', 'En attente'];
+    const currentIndex = statuses.indexOf(currentStatus);
+    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+    
+    try {
+      const success = await airtableService.updateTask(taskId, {
+        [AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]: nextStatus
+      });
+      if (success) {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, [AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]: nextStatus } : t));
+        toast.success(`Statut : ${nextStatus}`);
+      }
+    } catch (err) {
+      toast.error("Erreur de mise à jour");
+    }
+  };
+
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = true; // Use a local search if needed, but existing filter handles it
+    const matchesTab = filter === 'all' ? true : 
+                      filter === 'todo' ? task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] !== 'Terminé' :
+                      task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'Terminé';
+    const matchesProject = selectedProjectId === 'all' ? true : 
+                          task[AIRTABLE_CONFIG.FIELDS.TASKS.PROJECT]?.[0] === selectedProjectId;
+    
+    return matchesTab && matchesProject;
+  });
+
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
     return calculatePriorityScore(b) - calculatePriorityScore(a);
   });
 
@@ -101,21 +137,15 @@ export const Tasks: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/airtable/${AIRTABLE_CONFIG.TABLES.TASKS}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            [AIRTABLE_CONFIG.FIELDS.TASKS.TITLE]: newTask.title,
-            [AIRTABLE_CONFIG.FIELDS.TASKS.PROJECT]: [newTask.projectId],
-            [AIRTABLE_CONFIG.FIELDS.TASKS.DUE_DATE]: newTask.dueDate,
-            [AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]: newTask.status,
-            [AIRTABLE_CONFIG.FIELDS.TASKS.PRIORITY]: newTask.priority,
-          }
-        })
+      const success = await airtableService.createTask({
+        [AIRTABLE_CONFIG.FIELDS.TASKS.TITLE]: newTask.title,
+        [AIRTABLE_CONFIG.FIELDS.TASKS.PROJECT]: [newTask.projectId],
+        [AIRTABLE_CONFIG.FIELDS.TASKS.DUE_DATE]: newTask.dueDate,
+        [AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]: newTask.status,
+        [AIRTABLE_CONFIG.FIELDS.TASKS.PRIORITY]: newTask.priority,
       });
 
-      if (response.ok) {
+      if (success) {
         toast.success("Tâche créée avec succès !");
         setIsModalOpen(false);
         setNewTask({
@@ -234,6 +264,7 @@ export const Tasks: React.FC = () => {
                       <option value="À faire">À faire</option>
                       <option value="En cours">En cours</option>
                       <option value="Terminé">Terminé</option>
+                      <option value="En attente">En attente</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -246,6 +277,7 @@ export const Tasks: React.FC = () => {
                       <option value="Basse">Basse</option>
                       <option value="Moyenne">Moyenne</option>
                       <option value="Haute">Haute</option>
+                      <option value="Urgent">Urgent</option>
                     </select>
                   </div>
                 </div>
@@ -341,6 +373,17 @@ export const Tasks: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            <select 
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="bg-cloud-gray/50 border border-deep-blue/10 rounded-xl px-4 py-2 text-[10px] font-bold text-deep-blue/60 focus:outline-none focus:border-lime-ia appearance-none uppercase tracking-wider"
+            >
+              <option value="all">Tous les Projets</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME]}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -409,14 +452,20 @@ export const Tasks: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                        task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'Terminé' ? "bg-green-500/10 text-green-500" :
-                        task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'En cours' ? "bg-lime-ia/10 text-lime-ia" :
-                        "bg-deep-blue/5 text-deep-blue/40"
-                      )}>
-                        {task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]}
-                      </span>
+                      <button 
+                        onClick={() => toggleStatus(task.id, task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS])}
+                        className="transition-all hover:scale-105 active:scale-95"
+                      >
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                          task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'Terminé' ? "bg-green-500/10 text-green-500" :
+                          task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'En cours' ? "bg-lime-ia/10 text-lime-ia" :
+                          task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS] === 'En attente' ? "bg-orange-500/10 text-orange-500" :
+                          "bg-deep-blue/5 text-deep-blue/40"
+                        )}>
+                          {task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS]}
+                        </span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-right print:hidden">
                       <button className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors">

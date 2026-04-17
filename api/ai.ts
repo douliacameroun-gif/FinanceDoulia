@@ -9,6 +9,15 @@ const tavilyKey = process.env.TAVILY_KEY;
 const airtableKey = process.env.PAT_AIRTABLE;
 const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
 
+// Route to check API health
+router.get("/health", (req, res) => {
+  res.json({
+    gemini: !!process.env.GEMINI_API_KEY,
+    tavily: !!process.env.TAVILY_KEY,
+    airtable: !!process.env.PAT_AIRTABLE
+  });
+});
+
 // Route for AI Research (Tavily only, synthesis in frontend)
 router.post("/research", async (req, res) => {
   const { query } = req.body;

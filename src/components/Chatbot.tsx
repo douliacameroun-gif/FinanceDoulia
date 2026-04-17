@@ -102,6 +102,8 @@ export const Chatbot: React.FC = () => {
       const mappedInvoices = mapAirtableData(invoices, AIRTABLE_CONFIG.FIELDS.INVOICES);
 
       const businessContext = `
+      ${localStorage.getItem('doulia_ai_instructions') ? `INSTRUCTIONS SYSTÈME PERSONNALISÉES : ${localStorage.getItem('doulia_ai_instructions')}` : ''}
+
       CONTEXTE BUSINESS RÉEL (AIRTABLE) :
       - Clients : ${JSON.stringify(mappedClients)}
       - Projets : ${JSON.stringify(mappedProjects)}

@@ -19,8 +19,12 @@ app.get("/api/airtable/:tableId", async (req, res) => {
 
   try {
     const base = new Airtable({ apiKey }).base(baseId);
+    
+    // Only use field IDs if the table ID looks like a real 17-char Airtable ID
+    const isRealDataTableId = tableId.startsWith('tbl') && tableId.length === 17;
+    
     const records = await base(tableId).select({
-      returnFieldsByFieldId: true
+      returnFieldsByFieldId: isRealDataTableId
     }).all();
 
     const data = records.map((record) => ({
@@ -63,6 +67,22 @@ app.patch("/api/airtable/:tableId/:recordId", async (req, res) => {
   try {
     const base = new Airtable({ apiKey }).base(baseId);
     await base(tableId).update(recordId, fields, { typecast: true });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/airtable/:tableId/:recordId", async (req, res) => {
+  const { tableId, recordId } = req.params;
+  const apiKey = process.env.PAT_AIRTABLE;
+  const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
+
+  if (!apiKey) return res.status(500).json({ error: "Airtable API key is missing" });
+
+  try {
+    const base = new Airtable({ apiKey }).base(baseId);
+    await base(tableId).destroy(recordId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

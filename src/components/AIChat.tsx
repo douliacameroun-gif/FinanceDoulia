@@ -13,9 +13,13 @@ import {
   ArrowRight,
   RefreshCw,
   Mic,
-  Volume2
+  Volume2,
+  Globe,
+  Database,
+  Users
 } from 'lucide-react';
 import { airtableService } from '../lib/airtable';
+import { AIRTABLE_CONFIG } from '../lib/schema';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -26,6 +30,7 @@ export const AIChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [context, setContext] = useState<string>('');
+  const [sessionId] = useState(() => `sess_${Math.random().toString(36).substr(2, 9)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +63,19 @@ export const AIChat: React.FC = () => {
     }
   };
 
+  const logConversation = async (role: 'Utilisateur' | 'IA', content: string) => {
+    try {
+      await airtableService.createChatLog({
+        [AIRTABLE_CONFIG.FIELDS.CHAT_LOGS.SESSION_ID]: sessionId,
+        [AIRTABLE_CONFIG.FIELDS.CHAT_LOGS.ROLE]: role,
+        [AIRTABLE_CONFIG.FIELDS.CHAT_LOGS.CONTENT]: content,
+        [AIRTABLE_CONFIG.FIELDS.CHAT_LOGS.TIMESTAMP]: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error("Failed to log chat to Airtable", err);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -65,11 +83,18 @@ export const AIChat: React.FC = () => {
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
+    
+    // Log User Message
+    logConversation('Utilisateur', userMessage);
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const customInstructions = localStorage.getItem('doulia_ai_instructions') || '';
       
       const prompt = `Tu es le Hub Intelligent de DOULIA, une société de conseil en IA au Cameroun.
+      
+      INSTRUCTIONS SYSTÈME PERSONNALISÉES :
+      ${customInstructions}
       
       ${context}
       
@@ -90,6 +115,9 @@ export const AIChat: React.FC = () => {
 
       const aiText = response.text || "Désolé, je n'ai pas pu générer de réponse.";
       setMessages(prev => [...prev, { role: 'model', content: aiText }]);
+      
+      // Log AI Response
+      logConversation('IA', aiText);
     } catch (error: any) {
       toast.error("Erreur de communication avec l'IA");
       console.error(error);
@@ -178,25 +206,81 @@ export const AIChat: React.FC = () => {
         className="flex-1 overflow-y-auto px-4 py-4 space-y-6 custom-scrollbar"
       >
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-60">
-            <div className="max-w-md">
-              <h3 className="text-2xl font-black text-deep-blue mb-3 uppercase tracking-tight">Hub Intelligent DOULIA</h3>
-              <p className="text-sm text-deep-blue/60 font-medium">
-                Expertise contextuelle en IA pour le marché camerounais. <br/>
-                Posez vos questions stratégiques ci-dessous.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
-              {['Opportunités distribution Douala', 'Analyse concurrence IA', 'Résumé clients actifs', 'Idées nouveaux services'].map((hint) => (
-                <button 
-                  key={hint}
-                  onClick={() => setInput(hint)}
-                  className="p-4 bg-white border border-deep-blue/5 rounded-2xl text-xs text-deep-blue/60 hover:bg-lime-ia/5 hover:border-lime-ia/30 transition-all text-left font-bold shadow-sm"
-                >
-                  {hint}
-                </button>
-              ))}
-            </div>
+          <div className="h-full flex flex-col items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-3xl space-y-12"
+            >
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-ia/10 border border-lime-ia/20 text-lime-ia text-[10px] font-black uppercase tracking-widest mb-4">
+                  <Sparkles size={12} />
+                  Intelligence Artificielle Premium
+                </div>
+                <h3 className="text-5xl font-black text-deep-blue uppercase tracking-tighter leading-none">
+                  Hub Intelligent <span className="text-lime-ia">DOULIA</span>
+                </h3>
+                <p className="text-lg text-deep-blue/40 font-medium max-w-2xl mx-auto italic">
+                  "L'excellence stratégique propulsée par l'IA contextuelle."
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { 
+                    hint: 'Opportunités distribution Douala', 
+                    icon: Globe, 
+                    desc: 'Analyse de marché régionale' 
+                  },
+                  { 
+                    hint: 'Analyse concurrence IA', 
+                    icon: BrainCircuit, 
+                    desc: 'Veille stratégique ciblée' 
+                  },
+                  { 
+                    hint: 'Résumé clients actifs', 
+                    icon: Users, 
+                    desc: 'Synthèse CRM & Portefeuille' 
+                  },
+                  { 
+                    hint: 'Idées nouveaux services', 
+                    icon: PlusCircle, 
+                    desc: 'Innovation et croissance' 
+                  }
+                ].map((item) => (
+                  <button 
+                    key={item.hint}
+                    onClick={() => setInput(item.hint)}
+                    className="group p-5 bg-white border border-deep-blue/5 rounded-3xl text-left transition-all hover:bg-deep-blue hover:border-deep-blue shadow-sm hover:shadow-xl hover:-translate-y-1 relative overflow-hidden"
+                  >
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className="p-3 bg-lime-ia/10 rounded-2xl text-lime-ia group-hover:bg-white/10 transition-colors">
+                        <item.icon size={20} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black text-lime-ia uppercase tracking-widest mb-1 opacity-0 group-hover:opacity-100 transition-opacity">Consulter</div>
+                        <div className="text-sm font-bold text-deep-blue group-hover:text-white transition-colors">{item.hint}</div>
+                        <div className="text-[10px] text-deep-blue/30 group-hover:text-white/40 font-medium">{item.desc}</div>
+                      </div>
+                    </div>
+                    {/* Decorative glow */}
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-lime-ia/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-6 opacity-30 grayscale pointer-events-none">
+                <div className="flex items-center gap-2 font-black tracking-tighter text-xl">
+                  <Database size={16} /> AIRTABLE
+                </div>
+                <div className="flex items-center gap-2 font-black tracking-tighter text-xl text-lime-ia">
+                  <Sparkles size={16} /> GEMINI
+                </div>
+                <div className="flex items-center gap-2 font-black tracking-tighter text-xl">
+                  <Search size={16} /> TAVILY
+                </div>
+              </div>
+            </motion.div>
           </div>
         )}
 

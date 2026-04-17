@@ -61,8 +61,20 @@ export async function createAirtableRecord(tableId: string, fields: any): Promis
 }
 
 /**
- * Specific fetchers for Doulia Finance Hub
+ * Generic function to delete a record in an Airtable table via server proxy
  */
+export async function deleteAirtableRecord(tableId: string, recordId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/airtable/${tableId}/${recordId}`, {
+      method: 'DELETE',
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error(`Error deleting record ${recordId} from table ${tableId}:`, error);
+    return false;
+  }
+}
 export const airtableService = {
   getClients: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.CLIENTS),
   getProjects: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.PROJECTS),
@@ -71,10 +83,21 @@ export const airtableService = {
   getServices: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SERVICES),
   getSocialPosts: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SOCIAL_POSTS),
   getTasks: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.TASKS),
+  getChatLogs: (projectId?: string) => fetchAirtableData(AIRTABLE_CONFIG.TABLES.CHAT_LOGS),
+  getVeille: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.VEILLE),
+  
+  createChatLog: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.CHAT_LOGS, fields),
+  createTask: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.TASKS, fields),
+  createVeille: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.VEILLE, fields),
+  
   updateBudget: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.BUDGETS, id, fields),
   updateInvoice: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.INVOICES, id, fields),
+  updateTask: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.TASKS, id, fields),
+  updateVeille: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.VEILLE, id, fields),
+  
   createProject: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, fields),
   updateProject: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, id, fields),
+  deleteRecord: (tableId: string, recordId: string) => deleteAirtableRecord(tableId, recordId),
   createClient: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, fields),
   updateClient: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, id, fields),
   createSocialPost: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.SOCIAL_POSTS, fields),

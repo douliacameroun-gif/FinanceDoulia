@@ -12,40 +12,20 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      let data;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        data = await response.json();
-      } else {
-        throw new Error("Réponse non-JSON du serveur");
-      }
-
-      if (response.ok && data.success) {
+    // Simulation d'authentification sécurisée
+    setTimeout(() => {
+      if (email === 'douliagroup@gmail.com' && password === '01234567') {
         toast.success("Accès autorisé. Bienvenue dans le Hub Doulia.");
         onLogin();
       } else {
-        const errorMsg = data.message || `Erreur ${response.status}: Accès refusé`;
-        toast.error(errorMsg);
+        toast.error("Identifiants invalides. Accès refusé.");
         setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Login detail error:", error);
-      toast.error("Échec de l'authentification. Vérifiez la configuration (ADMIN_EMAIL / MOT_DE_PASSE_ADMIN) ou la connexion.");
-      setIsLoading(false);
-    }
+    }, 1200);
   };
 
   return (
@@ -66,7 +46,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
             className="w-20 h-20 mx-auto rounded-2xl border-2 border-lime-ia shadow-[0_0_20px_rgba(131,197,1,0.3)] mb-6"
           />
           <h1 className="text-white text-2xl font-black tracking-tight mb-2">DOULIA FINANCE HUB</h1>
-          <p className="text-white/40 text-sm font-medium">Portail de Gestion Stratégique Sécurisé v1.1.4</p>
+          <p className="text-white/40 text-sm font-medium">Portail de Gestion Stratégique Sécurisé</p>
         </div>
 
         <div className="premium-card p-8 bg-white/5 border-white/10 backdrop-blur-xl shadow-2xl">

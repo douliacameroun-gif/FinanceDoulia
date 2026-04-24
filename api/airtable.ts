@@ -4,10 +4,11 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const router = express.Router();
+const app = express();
+app.use(express.json());
 
-// Airtable Proxy Routes - Mounted at /api/airtable
-router.get("/:tableId", async (req, res) => {
+// Airtable Proxy Routes
+app.get("/api/airtable/:tableId", async (req, res) => {
   const { tableId } = req.params;
   const apiKey = process.env.PAT_AIRTABLE;
   const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
@@ -38,7 +39,7 @@ router.get("/:tableId", async (req, res) => {
   }
 });
 
-router.post("/:tableId", async (req, res) => {
+app.post("/api/airtable/:tableId", async (req, res) => {
   const { tableId } = req.params;
   const { fields } = req.body;
   const apiKey = process.env.PAT_AIRTABLE;
@@ -55,7 +56,7 @@ router.post("/:tableId", async (req, res) => {
   }
 });
 
-router.patch("/:tableId/:recordId", async (req, res) => {
+app.patch("/api/airtable/:tableId/:recordId", async (req, res) => {
   const { tableId, recordId } = req.params;
   const { fields } = req.body;
   const apiKey = process.env.PAT_AIRTABLE;
@@ -72,7 +73,7 @@ router.patch("/:tableId/:recordId", async (req, res) => {
   }
 });
 
-router.delete("/:tableId/:recordId", async (req, res) => {
+app.delete("/api/airtable/:tableId/:recordId", async (req, res) => {
   const { tableId, recordId } = req.params;
   const apiKey = process.env.PAT_AIRTABLE;
   const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
@@ -88,4 +89,4 @@ router.delete("/:tableId/:recordId", async (req, res) => {
   }
 });
 
-export default router;
+export default app;

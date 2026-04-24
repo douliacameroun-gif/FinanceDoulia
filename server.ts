@@ -3,14 +3,18 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import airtableApp from "./api/airtable";
 import aiRouter from "./api/ai";
+import authRouter from "./api/auth";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(express.json());
+
   // Use the airtable proxy app
   app.use(airtableApp);
   app.use("/api/ai", aiRouter);
+  app.use("/api/auth", authRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

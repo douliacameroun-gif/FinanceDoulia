@@ -12,20 +12,33 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulation d'authentification sécurisée
-    setTimeout(() => {
-      if (email === 'douliagroup@gmail.com' && password === '01234567') {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         toast.success("Accès autorisé. Bienvenue dans le Hub Doulia.");
         onLogin();
       } else {
-        toast.error("Identifiants invalides. Accès refusé.");
+        toast.error(data.message || "Identifiants invalides. Accès refusé.");
         setIsLoading(false);
       }
-    }, 1200);
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Erreur de connexion au serveur sécurisé. Veuillez réessayer.");
+      setIsLoading(false);
+    }
   };
 
   return (

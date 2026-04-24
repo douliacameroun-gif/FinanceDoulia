@@ -43,7 +43,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
       }
     } catch (error) {
       console.error("Login detail error:", error);
-      toast.error("Impossible de joindre le serveur. Vérifiez la configuration (ADMIN_EMAIL / MOT_DE_PASSE_ADMIN).");
+      toast.error("Échec de l'authentification. Vérifiez la configuration (ADMIN_EMAIL / MOT_DE_PASSE_ADMIN) ou la connexion.");
       setIsLoading(false);
     }
   };
@@ -66,7 +66,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
             className="w-20 h-20 mx-auto rounded-2xl border-2 border-lime-ia shadow-[0_0_20px_rgba(131,197,1,0.3)] mb-6"
           />
           <h1 className="text-white text-2xl font-black tracking-tight mb-2">DOULIA FINANCE HUB</h1>
-          <p className="text-white/40 text-sm font-medium">Portail de Gestion Stratégique Sécurisé v1.1.0</p>
+          <p className="text-white/40 text-sm font-medium">Portail de Gestion Stratégique Sécurisé v1.1.4</p>
         </div>
 
         <div className="premium-card p-8 bg-white/5 border-white/10 backdrop-blur-xl shadow-2xl">

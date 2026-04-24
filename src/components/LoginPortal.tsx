@@ -25,7 +25,13 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await response.json();
+      } else {
+        throw new Error("Réponse non-JSON du serveur");
+      }
 
       if (response.ok && data.success) {
         toast.success("Accès autorisé. Bienvenue dans le Hub Doulia.");
@@ -36,7 +42,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLogin }) => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("Erreur de connexion au serveur sécurisé. Veuillez réessayer.");
+      toast.error("Échec de l'authentification. Veuillez vérifier vos identifiants ou la connexion serveur.");
       setIsLoading(false);
     }
   };

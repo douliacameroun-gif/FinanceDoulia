@@ -11,10 +11,20 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Use the airtable proxy app
-  app.use(airtableApp);
-  app.use("/api/ai", aiRouter);
+  // Routes API
   app.use("/api/auth", authRouter);
+  app.use("/api/ai", aiRouter);
+  app.use(airtableApp);
+
+  app.get("/api/auth/status", (req, res) => {
+    res.json({ 
+      active: true, 
+      config: { 
+        email: !!process.env.ADMIN_EMAIL, 
+        pass: !!process.env.MOT_DE_PASSE_ADMIN 
+      } 
+    });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

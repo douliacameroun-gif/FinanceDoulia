@@ -41,10 +41,6 @@ export const InvoiceGenerator: React.FC = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [amountPaid, setAmountPaid] = useState<number>(0);
 
-  const totalAmount = React.useMemo(() => {
-    return items.reduce((acc, item) => acc + (Number(item.total) || 0), 0);
-  }, [items]);
-
   React.useEffect(() => {
     const savedHistory = localStorage.getItem('doulia_doc_history');
     if (savedHistory) {
@@ -70,12 +66,11 @@ export const InvoiceGenerator: React.FC = () => {
   const variableServices = services.filter(s => s[AIRTABLE_CONFIG.FIELDS.SERVICES.TYPE] === 'Variable');
 
   const addItem = (description: string, price: number, type: 'fixed' | 'variable') => {
-    const numericPrice = Number(price) || 0;
     const newItem: InvoiceItem = {
       description,
       quantity: 1,
-      unitPrice: numericPrice,
-      total: numericPrice,
+      unitPrice: price,
+      total: price,
       type
     };
     setItems([...items, newItem]);
@@ -88,18 +83,11 @@ export const InvoiceGenerator: React.FC = () => {
 
   const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
     const newItems = [...items];
-    const item = { ...newItems[index] };
+    const item = { ...newItems[index], [field]: value };
     
-    // Update the specific field
-    (item as any)[field] = value;
-    
-    // Always ensure quantity and unitPrice are numbers
-    const qty = Number(item.quantity) || 0;
-    const price = Number(item.unitPrice) || 0;
-    
-    item.quantity = qty;
-    item.unitPrice = price;
-    item.total = qty * price;
+    if (field === 'quantity' || field === 'unitPrice') {
+      item.total = item.quantity * item.unitPrice;
+    }
     
     newItems[index] = item;
     setItems(newItems);
@@ -108,6 +96,10 @@ export const InvoiceGenerator: React.FC = () => {
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
     toast.info("Élément supprimé");
+  };
+
+  const calculateTotal = () => {
+    return items.reduce((acc, item) => acc + item.total, 0);
   };
 
   const saveToHistory = () => {
@@ -119,7 +111,7 @@ export const InvoiceGenerator: React.FC = () => {
       number: invoiceNumber,
       clientName,
       date: new Date().toLocaleDateString(),
-      total: totalAmount,
+      total: calculateTotal(),
       items,
       clientPhone,
       clientAddress,
@@ -614,8 +606,8 @@ export const InvoiceGenerator: React.FC = () => {
                 ))}
                 {/* Summary Table Row */}
                 <tr className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest border-t-2 border-deep-blue">
-                  <td colSpan={3} className="px-5 py-4 text-right">Total À Payer</td>
-                  <td className="px-5 py-4 text-right">{totalAmount.toLocaleString()} FCFA</td>
+                  <td colSpan={3} className="px-5 py-4 text-right">Total Général</td>
+                  <td className="px-5 py-4 text-right">{calculateTotal().toLocaleString()} FCFA</td>
                 </tr>
                 {/* Empty rows to maintain structure if needed */}
                 {items.length < 5 && Array.from({ length: 4 - items.length }).map((_, i) => (
@@ -635,7 +627,7 @@ export const InvoiceGenerator: React.FC = () => {
             <div className="w-72 space-y-3">
               <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                 <span>Sous-total HT</span>
-                <span className="text-deep-blue">{totalAmount.toLocaleString()} FCFA</span>
+                <span className="text-deep-blue">{calculateTotal().toLocaleString()} FCFA</span>
               </div>
               <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                 <span>TVA (0%)</span>
@@ -649,8 +641,8 @@ export const InvoiceGenerator: React.FC = () => {
                 <div className="absolute top-0 right-0 w-16 h-16 bg-lime-ia/10 rotate-45 translate-x-8 -translate-y-8" />
                 
                 <div className="relative z-10 flex flex-col">
-                  <span className="font-black uppercase text-[9px] tracking-[0.2em] opacity-60 mb-1">TOTAL À PAYER (NET)</span>
-                  <span className="text-xl font-black">{totalAmount.toLocaleString()} FCFA</span>
+                  <span className="font-black uppercase text-[9px] tracking-[0.2em] opacity-60 mb-1">Total Net à Payer</span>
+                  <span className="text-xl font-black">{calculateTotal().toLocaleString()} FCFA</span>
                 </div>
               </div>
 
@@ -662,7 +654,7 @@ export const InvoiceGenerator: React.FC = () => {
                   </div>
                   <div className="flex justify-between bg-lime-ia/10 border border-lime-ia/20 p-3 rounded-lg">
                     <span className="font-bold uppercase text-[9px] text-deep-blue/60 self-center">Reste à Payer</span>
-                    <span className="text-sm font-black text-deep-blue">{(totalAmount - amountPaid).toLocaleString()} FCFA</span>
+                    <span className="text-sm font-black text-deep-blue">{(calculateTotal() - amountPaid).toLocaleString()} FCFA</span>
                   </div>
                 </>
               )}

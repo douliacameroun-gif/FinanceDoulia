@@ -601,7 +601,7 @@ export const InvoiceGenerator: React.FC = () => {
             <div className="flex flex-col items-start gap-2">
               <div className="p-2 bg-white border border-slate-100 rounded-lg shadow-sm">
                 <QRCodeSVG 
-                  value={`DOULIA-AUTH|ID:${invoiceNumber}|DATE:${new Date().toLocaleDateString()}|AMT:${calculateTotal()}|CLIENT:${clientName}`}
+                  value="https://douliacameroun-825a6.web.app/"
                   size={64}
                   level="H"
                   includeMargin={false}
@@ -615,9 +615,9 @@ export const InvoiceGenerator: React.FC = () => {
 
             {/* Signature & Digital Stamp */}
             <div className="relative flex flex-col items-center">
-              {/* Digital Stamp (Cachet) */}
-              <div className="absolute -top-12 right-0 w-40 h-40 rounded-full border-[4px] border-blue-900/30 flex items-center justify-center rotate-12 pointer-events-none z-10">
-                <div className="w-[140px] h-[140px] rounded-full border-2 border-dashed border-blue-900/20 flex flex-col items-center justify-center p-3 text-center relative bg-white/50 backdrop-blur-[1px]">
+              {/* Digital Stamp (Cachet) - Optimized for print/PDF visibility */}
+              <div className="absolute -top-12 right-0 w-40 h-40 rounded-full border-[4px] border-blue-900/40 flex items-center justify-center rotate-12 pointer-events-none z-10 print:opacity-100">
+                <div className="w-[140px] h-[140px] rounded-full border-2 border-dashed border-blue-900/30 flex flex-col items-center justify-center p-3 text-center relative bg-white/20 backdrop-blur-[1px]">
                   {/* Circular Text (Simulated) */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-full h-full rounded-full border border-dashed border-blue-900/10 animate-[spin_20s_linear_infinite]" />
@@ -669,6 +669,10 @@ export const InvoiceGenerator: React.FC = () => {
               "L'IA n'est pas un coût, c'est un investissement dont le ROI est visible dès le premier mois."
             </p>
             <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[9px] font-bold text-slate-500">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1 h-1 rounded-full bg-lime-ia" />
+                <span className="text-deep-blue">TEL : 6 56 30 48 18 / 6 73 04 31 27</span>
+              </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-lime-ia" />
                 <span className="text-deep-blue">contact@doulia.cm</span>

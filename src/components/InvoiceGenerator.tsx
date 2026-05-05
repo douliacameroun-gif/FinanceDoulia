@@ -39,6 +39,7 @@ export const InvoiceGenerator: React.FC = () => {
   const [services, setServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [amountPaid, setAmountPaid] = useState<number>(0);
 
   React.useEffect(() => {
     const savedHistory = localStorage.getItem('doulia_doc_history');
@@ -319,6 +320,20 @@ export const InvoiceGenerator: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <label className="premium-label">Montant Versé (Acompte)</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30 font-bold text-xs">FCFA</div>
+                <input 
+                  type="number" 
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(parseInt(e.target.value) || 0)}
+                  className="premium-input pl-14"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-6 pt-4">
               <div className="space-y-3">
                 <label className="premium-label flex items-center gap-2">
@@ -513,26 +528,36 @@ export const InvoiceGenerator: React.FC = () => {
           className="bg-white text-slate-900 p-12 rounded-sm shadow-2xl min-h-[842px] w-full max-w-[595px] mx-auto flex flex-col border border-slate-200 print:shadow-none print:border-none print:p-0"
         >
           {/* Header */}
-          <div className="flex justify-between items-start mb-12 border-b-4 border-deep-blue pb-8">
-            <div>
-              <img 
-                src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
-                alt="Logo" 
-                className="h-24 w-24 object-cover rounded-xl mb-4 border-2 border-lime-ia shadow-lg"
-                referrerPolicy="no-referrer"
-              />
-              <h1 className="text-3xl font-bold tracking-tighter uppercase text-deep-blue">
+          <div className="flex justify-between items-start mb-12 relative">
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-lime-ia/5 rounded-full blur-3xl" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-6">
+                <img 
+                  src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
+                  alt="Logo" 
+                  className="h-16 w-16 object-cover rounded-xl border-2 border-lime-ia/20 shadow-xl"
+                  referrerPolicy="no-referrer"
+                />
+                <div>
+                  <p className="font-black text-2xl text-deep-blue tracking-tighter leading-none">DOULIA</p>
+                  <p className="text-[8px] font-bold text-lime-ia uppercase tracking-wider mt-1">Propulsez votre croissance par l'IA</p>
+                </div>
+              </div>
+              <h1 className="text-5xl font-black tracking-tighter uppercase text-deep-blue/10 absolute -bottom-4 left-0 select-none pointer-events-none">
                 {docType === 'invoice' ? 'Facture' : 'Devis'}
               </h1>
-              <div className="w-12 h-1.5 bg-lime-ia mt-2" />
+              <h1 className="text-3xl font-black tracking-tight uppercase text-deep-blue relative z-10">
+                {docType === 'invoice' ? 'Facture' : 'Devis'}
+              </h1>
             </div>
-            <div className="text-right space-y-1">
-              <p className="font-black text-xl text-deep-blue tracking-tight">DOULIA</p>
-              <p className="text-sm font-medium text-slate-600">Expertise en Intelligence Artificielle</p>
-              <div className="pt-4 text-xs text-slate-500 font-medium">
-                <p>Douala, Cameroun</p>
-                <p className="text-deep-blue font-bold">N° {invoiceNumber}</p>
-                <p>Date: {new Date().toLocaleDateString()}</p>
+            <div className="text-right pt-2">
+              <div className="inline-block bg-slate-900 text-white px-4 py-2 rounded-lg mb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Numéro</p>
+                <p className="text-sm font-black tracking-wider">{invoiceNumber}</p>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Date d'émission</p>
+                <p className="text-xs font-black text-deep-blue">{new Date().toLocaleDateString()}</p>
               </div>
             </div>
           </div>
@@ -555,22 +580,42 @@ export const InvoiceGenerator: React.FC = () => {
 
           {/* Table */}
           <div className="flex-1">
-            <table className="w-full text-sm">
+            <table className="w-full text-[11px]">
               <thead>
-                <tr className="bg-deep-blue text-white">
-                  <th className="text-left px-4 py-3 font-bold uppercase text-[10px] tracking-wider rounded-tl-lg">Description</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Qté</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider">Prix Unitaire</th>
-                  <th className="text-right px-4 py-3 font-bold uppercase text-[10px] tracking-wider rounded-tr-lg">Total</th>
+                <tr className="bg-slate-900 text-white">
+                  <th className="text-left px-5 py-4 font-black uppercase tracking-[0.15em] text-[9px] rounded-tl-xl">Désignation des Services</th>
+                  <th className="text-center px-4 py-4 font-black uppercase tracking-[0.15em] text-[9px]">Qté</th>
+                  <th className="text-right px-4 py-4 font-black uppercase tracking-[0.15em] text-[9px]">P.U (FCFA)</th>
+                  <th className="text-right px-5 py-4 font-black uppercase tracking-[0.15em] text-[9px] rounded-tr-xl">Montant (FCFA)</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="border-x border-slate-100">
                 {items.map((item, i) => (
-                  <tr key={i} className={cn("border-b border-slate-100", i % 2 === 0 ? "bg-white" : "bg-slate-50/50")}>
-                    <td className="px-4 py-4 font-medium text-deep-blue">{item.description}</td>
-                    <td className="text-right px-4 py-4">{item.quantity}</td>
-                    <td className="text-right px-4 py-4">{item.unitPrice.toLocaleString()}</td>
-                    <td className="text-right px-4 py-4 font-bold text-deep-blue">{item.total.toLocaleString()}</td>
+                  <tr key={i} className={cn(
+                    "border-b border-slate-50 transition-colors hover:bg-slate-50/50",
+                    i % 2 === 0 ? "bg-white" : "bg-slate-50/20"
+                  )}>
+                    <td className="px-5 py-5">
+                      <p className="font-bold text-deep-blue text-xs mb-0.5">{item.description}</p>
+                      <p className="text-[9px] text-slate-400 font-medium italic">Prestation de service IA & Digital</p>
+                    </td>
+                    <td className="text-center px-4 py-5 font-bold text-slate-600">{item.quantity}</td>
+                    <td className="text-right px-4 py-5 font-medium text-slate-600">{item.unitPrice.toLocaleString()}</td>
+                    <td className="text-right px-5 py-5 font-black text-deep-blue">{item.total.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {/* Summary Table Row */}
+                <tr className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest border-t-2 border-deep-blue">
+                  <td colSpan={3} className="px-5 py-4 text-right">Total Général</td>
+                  <td className="px-5 py-4 text-right">{calculateTotal().toLocaleString()} FCFA</td>
+                </tr>
+                {/* Empty rows to maintain structure if needed */}
+                {items.length < 5 && Array.from({ length: 4 - items.length }).map((_, i) => (
+                  <tr key={`empty-${i}`} className="border-b border-slate-50 h-12">
+                    <td className="px-5 py-4"></td>
+                    <td className="px-4 py-4"></td>
+                    <td className="px-4 py-4"></td>
+                    <td className="px-5 py-4"></td>
                   </tr>
                 ))}
               </tbody>
@@ -579,19 +624,40 @@ export const InvoiceGenerator: React.FC = () => {
 
           {/* Totals */}
           <div className="mt-8 flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between text-sm text-slate-500 px-2">
+            <div className="w-72 space-y-3">
+              <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                 <span>Sous-total HT</span>
-                <span>{calculateTotal().toLocaleString()} FCFA</span>
+                <span className="text-deep-blue">{calculateTotal().toLocaleString()} FCFA</span>
               </div>
-              <div className="flex justify-between text-sm text-slate-500 px-2">
+              <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                 <span>TVA (0%)</span>
-                <span>0 FCFA</span>
+                <span className="text-deep-blue">0 FCFA</span>
               </div>
-              <div className="flex justify-between bg-deep-blue text-white p-4 rounded-lg shadow-lg">
-                <span className="font-bold uppercase text-[10px] self-center">Total Net</span>
-                <span className="text-lg font-black">{calculateTotal().toLocaleString()} FCFA</span>
+              
+              <div className="h-px bg-slate-100" />
+              
+              <div className="flex justify-between bg-deep-blue text-white p-4 rounded-xl shadow-lg relative overflow-hidden">
+                {/* Visual Accent */}
+                <div className="absolute top-0 right-0 w-16 h-16 bg-lime-ia/10 rotate-45 translate-x-8 -translate-y-8" />
+                
+                <div className="relative z-10 flex flex-col">
+                  <span className="font-black uppercase text-[9px] tracking-[0.2em] opacity-60 mb-1">Total Net à Payer</span>
+                  <span className="text-xl font-black">{calculateTotal().toLocaleString()} FCFA</span>
+                </div>
               </div>
+
+              {amountPaid > 0 && (
+                <>
+                  <div className="flex justify-between text-[11px] font-bold text-lime-ia uppercase tracking-wider px-2 pt-1">
+                    <span>Montant Versé</span>
+                    <span>- {amountPaid.toLocaleString()} FCFA</span>
+                  </div>
+                  <div className="flex justify-between bg-lime-ia/10 border border-lime-ia/20 p-3 rounded-lg">
+                    <span className="font-bold uppercase text-[9px] text-deep-blue/60 self-center">Reste à Payer</span>
+                    <span className="text-sm font-black text-deep-blue">{(calculateTotal() - amountPaid).toLocaleString()} FCFA</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

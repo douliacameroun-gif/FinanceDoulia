@@ -97,6 +97,11 @@ export const airtableService = {
   
   createProject: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, fields),
   updateProject: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, id, fields),
+  updateService: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.SERVICES, id, fields),
+  
+  createInvoice: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.INVOICES, fields),
+  createExpense: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.EXPENSES, fields),
+  
   deleteRecord: (tableId: string, recordId: string) => deleteAirtableRecord(tableId, recordId),
   createClient: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, fields),
   updateClient: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.CLIENTS, id, fields),

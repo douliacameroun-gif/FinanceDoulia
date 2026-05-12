@@ -14,8 +14,17 @@ export const AIRTABLE_CONFIG = {
     TASKS: 'Task_Manager',
     VEILLE: 'Veille_Stratégique',
     CHAT_LOGS: 'Chat_Logs',
+    EXPENSES: 'tblExpensesDoulia', // New table for tracking expenses docs
   },
   FIELDS: {
+    EXPENSES: {
+      ID: 'fldExpId',
+      NAME: 'fldExpName',
+      AMOUNT: 'fldExpAmount',
+      DATE: 'fldExpDate',
+      CATEGORY: 'fldExpCategory',
+      STATUS: 'fldExpStatus',
+    },
     CLIENTS: {
       NAME: 'fldn2cShZ3MzzI2lc',
       CONTACT: 'fldaimzKu1Hnkj73D',

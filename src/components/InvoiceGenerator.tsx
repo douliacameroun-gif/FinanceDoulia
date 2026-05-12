@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar, History, Eye, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Download, FileCheck, Printer, Sparkles, Phone, MapPin, CreditCard, Calendar, History, Eye, RotateCcw, Wifi, WifiOff, MessageCircle, PenTool, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
+import SignatureCanvas from 'react-signature-canvas';
 import { cn } from '../lib/utils';
 import { InvoiceItem } from '../lib/airtable-schema';
 
@@ -13,7 +14,7 @@ import { airtableService } from '../lib/airtable';
 
 interface HistoryEntry {
   id: string;
-  type: 'invoice' | 'quote';
+  type: 'invoice' | 'quote' | 'expense';
   number: string;
   clientName: string;
   date: string;
@@ -24,6 +25,8 @@ interface HistoryEntry {
   taxId: string;
   paymentMethod: string;
   paymentTerms: string;
+  synced?: boolean;
+  signature?: string;
 }
 
 export const InvoiceGenerator: React.FC = () => {
@@ -32,16 +35,66 @@ export const InvoiceGenerator: React.FC = () => {
   const [clientPhone, setClientPhone] = useState('+237 ');
   const [clientAddress, setClientAddress] = useState('');
   const [taxId, setTaxId] = useState('');
-  const [docType, setDocType] = useState<'invoice' | 'quote'>('invoice');
+  const [docType, setDocType] = useState<'invoice' | 'quote' | 'expense'>('invoice');
   const [paymentMethod, setPaymentMethod] = useState('Virement Bancaire / Mobile Money');
   const [paymentTerms, setPaymentTerms] = useState('30 jours');
-  const [invoiceNumber, setInvoiceNumber] = useState(`${docType === 'invoice' ? 'INV' : 'DEV'}-${Date.now().toString().slice(-6)}`);
+  const [invoiceNumber, setInvoiceNumber] = useState(`${docType === 'invoice' ? 'INV' : docType === 'quote' ? 'DEV' : 'DEP'}-${Date.now().toString().slice(-6)}`);
   const [services, setServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [amountPaid, setAmountPaid] = useState<number>(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const sigPad = useRef<any>(null);
+  const [isSignatureMode, setIsSignatureMode] = useState(false);
 
   React.useEffect(() => {
+    setInvoiceNumber(`${docType === 'invoice' ? 'INV' : docType === 'quote' ? 'DEV' : 'DEP'}-${Date.now().toString().slice(-6)}`);
+    setSignatureData(null); // Reset signature when doc type changes
+  }, [docType]);
+
+  const clearSignature = () => {
+    sigPad.current?.clear();
+    setSignatureData(null);
+  };
+
+  const saveSignature = () => {
+    if (sigPad.current?.isEmpty()) {
+      toast.error("Signature vide !");
+      return;
+    }
+    setSignatureData(sigPad.current?.getTrimmedCanvas().toDataURL('image/png'));
+    setIsSignatureMode(false);
+    toast.success("Signature enregistrée !");
+  };
+
+  const handleWhatsAppSend = () => {
+    if (!clientPhone || clientPhone.length < 9) {
+      toast.error("Numéro de téléphone client manquant ou invalide");
+      return;
+    }
+
+    const typeLabel = docType === 'invoice' ? 'Facture' : docType === 'quote' ? 'Devis' : 'Dépense';
+    const totalAmount = calculateTotal();
+    const cleanPhone = clientPhone.replace(/\s+/g, '');
+    
+    const message = `*Bonjour ${clientName || 'Cher Client'}*,%0A%0AVoici votre *${typeLabel} DOULIA* n° *${invoiceNumber}*.%0A%0A*Détails :*%0A- *Montant Total :* ${totalAmount.toLocaleString()} FCFA%0A- *Date :* ${new Date().toLocaleDateString()}%0A%0A_Propulsez votre croissance par l'IA avec DOULIA._%0A%0AAccédez à vos documents via : https://douliacameroun-825a6.web.app/`;
+    
+    window.open(`https://wa.me/${cleanPhone.startsWith('+') ? cleanPhone.substring(1) : cleanPhone}?text=${message}`, '_blank');
+    toast.success("Redirection vers WhatsApp...");
+  };
+
+  React.useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      triggerSync();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     const savedHistory = localStorage.getItem('doulia_doc_history');
     if (savedHistory) {
       try {
@@ -60,7 +113,65 @@ export const InvoiceGenerator: React.FC = () => {
       setIsLoading(false);
     };
     loadServices();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
+
+  const triggerSync = async () => {
+    const savedHistory = localStorage.getItem('doulia_doc_history');
+    if (!savedHistory) return;
+    
+    let currentHistory: HistoryEntry[] = JSON.parse(savedHistory);
+    let hasChanges = false;
+
+    for (const entry of currentHistory) {
+      if (!entry.synced) {
+        const success = await syncEntryToAirtable(entry);
+        if (success) {
+          entry.synced = true;
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      setHistory(currentHistory);
+      localStorage.setItem('doulia_doc_history', JSON.stringify(currentHistory));
+      toast.success("Synchronisation effectuée avec succès !");
+    }
+  };
+
+  const syncEntryToAirtable = async (entry: HistoryEntry) => {
+    try {
+      if (entry.type === 'invoice' || entry.type === 'quote') {
+        const res = await airtableService.createInvoice({
+          [AIRTABLE_CONFIG.FIELDS.INVOICES.ID]: entry.number,
+          [AIRTABLE_CONFIG.FIELDS.INVOICES.CLIENT]: entry.clientName,
+          [AIRTABLE_CONFIG.FIELDS.INVOICES.TOTAL_AMOUNT]: entry.total,
+          [AIRTABLE_CONFIG.FIELDS.INVOICES.EMISSION_DATE]: entry.date,
+          [AIRTABLE_CONFIG.FIELDS.INVOICES.STATUS]: entry.type === 'invoice' ? 'Payé' : 'Brouillon'
+        });
+        return !!res;
+      } else if (entry.type === 'expense') {
+        const res = await airtableService.createExpense({
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.ID]: entry.number,
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.NAME]: entry.clientName, // For expense, clientName is actually the vendor/reason
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.AMOUNT]: entry.total,
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.DATE]: entry.date,
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.CATEGORY]: 'Général',
+          [AIRTABLE_CONFIG.FIELDS.EXPENSES.STATUS]: 'Payé'
+        });
+        return !!res;
+      }
+      return false;
+    } catch (e) {
+      console.error("Sync error:", e);
+      return false;
+    }
+  };
 
   const fixedPrices = services.filter(s => s[AIRTABLE_CONFIG.FIELDS.SERVICES.TYPE] === 'Fixe');
   const variableServices = services.filter(s => s[AIRTABLE_CONFIG.FIELDS.SERVICES.TYPE] === 'Variable');
@@ -102,7 +213,7 @@ export const InvoiceGenerator: React.FC = () => {
     return items.reduce((acc, item) => acc + item.total, 0);
   };
 
-  const saveToHistory = () => {
+  const saveToHistory = async () => {
     if (!clientName || items.length === 0) return;
 
     const newEntry: HistoryEntry = {
@@ -117,8 +228,15 @@ export const InvoiceGenerator: React.FC = () => {
       clientAddress,
       taxId,
       paymentMethod,
-      paymentTerms
+      paymentTerms,
+      synced: false
     };
+
+    // Attempt silent sync if online
+    if (navigator.onLine) {
+      const synced = await syncEntryToAirtable(newEntry);
+      if (synced) newEntry.synced = true;
+    }
 
     const updatedHistory = [newEntry, ...history].slice(0, 50); // Keep last 50
     setHistory(updatedHistory);
@@ -145,12 +263,12 @@ export const InvoiceGenerator: React.FC = () => {
     toast.info("Document supprimé de l'historique");
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!clientName) {
       toast.error("Veuillez entrer le nom du client avant d'imprimer");
       return;
     }
-    saveToHistory();
+    await saveToHistory();
     window.print();
   };
 
@@ -160,7 +278,7 @@ export const InvoiceGenerator: React.FC = () => {
       return;
     }
     
-    saveToHistory();
+    await saveToHistory();
     const promise = new Promise(async (resolve, reject) => {
       try {
         const element = document.getElementById('invoice-preview');
@@ -212,6 +330,13 @@ export const InvoiceGenerator: React.FC = () => {
               Générateur de Documents
             </h2>
             <div className="flex items-center gap-3">
+              <div className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                isOnline ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+              )}>
+                {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
+                {isOnline ? "Sync Online" : "Mode Hors Ligne"}
+              </div>
               <button 
                 onClick={handleMagicFill}
                 className="p-2 text-lime-ia hover:bg-lime-ia/10 rounded-lg transition-colors"
@@ -237,6 +362,15 @@ export const InvoiceGenerator: React.FC = () => {
                   )}
                 >
                   Devis
+                </button>
+                <button 
+                  onClick={() => setDocType('expense')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[11px] font-bold transition-all",
+                    docType === 'expense' ? "bg-red-500 text-white" : "text-deep-blue/40 hover:text-deep-blue"
+                  )}
+                >
+                  Dépense
                 </button>
               </div>
             </div>
@@ -322,15 +456,23 @@ export const InvoiceGenerator: React.FC = () => {
 
             <div>
               <label className="premium-label">Montant Versé (Acompte)</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30 font-bold text-xs">FCFA</div>
-                <input 
-                  type="number" 
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(parseInt(e.target.value) || 0)}
-                  className="premium-input pl-14"
-                  placeholder="0"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-deep-blue/30 font-bold text-xs">FCFA</div>
+                  <input 
+                    type="number" 
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(parseInt(e.target.value) || 0)}
+                    className="premium-input pl-14"
+                    placeholder="0"
+                  />
+                </div>
+                <button 
+                  onClick={() => setIsSignatureMode(true)}
+                  className="flex items-center gap-2 px-4 py-2 border-2 border-deep-blue text-deep-blue rounded-xl font-bold text-xs hover:bg-deep-blue hover:text-white transition-all shadow-sm"
+                >
+                  <PenTool size={16} /> Signer
+                </button>
               </div>
             </div>
 
@@ -510,6 +652,13 @@ export const InvoiceGenerator: React.FC = () => {
       <div className="space-y-6">
         <div className="flex justify-end gap-3 print:hidden">
           <button 
+            onClick={handleWhatsAppSend}
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold text-sm transition-colors shadow-lg"
+            title="Doulia Connect : Envoyer par WhatsApp"
+          >
+            <MessageCircle size={18} /> WhatsApp
+          </button>
+          <button 
             onClick={handlePrint}
             className="btn-secondary flex items-center gap-2"
           >
@@ -544,14 +693,20 @@ export const InvoiceGenerator: React.FC = () => {
                 </div>
               </div>
               <h1 className="text-5xl font-black tracking-tighter uppercase text-deep-blue/10 absolute -bottom-4 left-0 select-none pointer-events-none">
-                {docType === 'invoice' ? 'Facture' : 'Devis'}
+                {docType === 'invoice' ? 'Facture' : docType === 'quote' ? 'Devis' : 'Dépense'}
               </h1>
-              <h1 className="text-3xl font-black tracking-tight uppercase text-deep-blue relative z-10">
-                {docType === 'invoice' ? 'Facture' : 'Devis'}
+              <h1 className={cn(
+                "text-3xl font-black tracking-tight uppercase relative z-10",
+                docType === 'expense' ? "text-red-600" : "text-deep-blue"
+              )}>
+                {docType === 'invoice' ? 'Facture' : docType === 'quote' ? 'Devis' : 'Dépense'}
               </h1>
             </div>
             <div className="text-right pt-2">
-              <div className="inline-block bg-slate-900 text-white px-4 py-2 rounded-lg mb-4">
+              <div className={cn(
+                "inline-block text-white px-4 py-2 rounded-lg mb-4",
+                docType === 'expense' ? "bg-red-600" : "bg-slate-900"
+              )}>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Numéro</p>
                 <p className="text-sm font-black tracking-wider">{invoiceNumber}</p>
               </div>
@@ -564,9 +719,14 @@ export const InvoiceGenerator: React.FC = () => {
 
           {/* Client Info */}
           <div className="mb-12 grid grid-cols-2 gap-8">
-            <div className="bg-slate-50 p-5 rounded-xl border-l-4 border-lime-ia">
-              <p className="text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Facturé à</p>
-              <p className="font-bold text-lg text-deep-blue leading-tight mb-1">{clientName || 'Client Nom'}</p>
+            <div className={cn(
+              "p-5 rounded-xl border-l-4",
+              docType === 'expense' ? "bg-red-50 border-red-600" : "bg-slate-50 border-lime-ia"
+            )}>
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">
+                {docType === 'expense' ? 'Payé à (Fournisseur)' : 'Facturé à'}
+              </p>
+              <p className="font-bold text-lg text-deep-blue leading-tight mb-1">{clientName || (docType === 'expense' ? 'Nom du Fournisseur' : 'Client Nom')}</p>
               {clientPhone && <p className="text-xs text-slate-600 flex items-center gap-1.5 mb-1"><Phone size={10} /> {clientPhone}</p>}
               {clientAddress && <p className="text-xs text-slate-500 flex items-start gap-1.5"><MapPin size={10} className="mt-0.5 shrink-0" /> {clientAddress}</p>}
               {taxId && <p className="text-[10px] font-bold text-deep-blue/40 mt-2">NIU: {taxId}</p>}
@@ -582,8 +742,13 @@ export const InvoiceGenerator: React.FC = () => {
           <div className="flex-1">
             <table className="w-full text-[11px]">
               <thead>
-                <tr className="bg-slate-900 text-white">
-                  <th className="text-left px-5 py-4 font-black uppercase tracking-[0.15em] text-[9px] rounded-tl-xl">Désignation des Services</th>
+                <tr className={cn(
+                  "text-white",
+                  docType === 'expense' ? "bg-red-600" : "bg-slate-900"
+                )}>
+                  <th className="text-left px-5 py-4 font-black uppercase tracking-[0.15em] text-[9px] rounded-tl-xl">
+                    {docType === 'expense' ? 'Désignation des Dépenses' : 'Désignation des Services'}
+                  </th>
                   <th className="text-center px-4 py-4 font-black uppercase tracking-[0.15em] text-[9px]">Qté</th>
                   <th className="text-right px-4 py-4 font-black uppercase tracking-[0.15em] text-[9px]">P.U (FCFA)</th>
                   <th className="text-right px-5 py-4 font-black uppercase tracking-[0.15em] text-[9px] rounded-tr-xl">Montant (FCFA)</th>
@@ -605,7 +770,10 @@ export const InvoiceGenerator: React.FC = () => {
                   </tr>
                 ))}
                 {/* Summary Table Row */}
-                <tr className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest border-t-2 border-deep-blue">
+                <tr className={cn(
+                  "text-white font-black text-[10px] uppercase tracking-widest border-t-2",
+                  docType === 'expense' ? "bg-red-500 border-red-700" : "bg-slate-900 border-deep-blue"
+                )}>
                   <td colSpan={3} className="px-5 py-4 text-right">Total Général</td>
                   <td className="px-5 py-4 text-right">{calculateTotal().toLocaleString()} FCFA</td>
                 </tr>
@@ -636,12 +804,17 @@ export const InvoiceGenerator: React.FC = () => {
               
               <div className="h-px bg-slate-100" />
               
-              <div className="flex justify-between bg-deep-blue text-white p-4 rounded-xl shadow-lg relative overflow-hidden">
+              <div className={cn(
+                "flex justify-between text-white p-4 rounded-xl shadow-lg relative overflow-hidden",
+                docType === 'expense' ? "bg-red-600" : "bg-deep-blue"
+              )}>
                 {/* Visual Accent */}
-                <div className="absolute top-0 right-0 w-16 h-16 bg-lime-ia/10 rotate-45 translate-x-8 -translate-y-8" />
+                <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rotate-45 translate-x-8 -translate-y-8" />
                 
                 <div className="relative z-10 flex flex-col">
-                  <span className="font-black uppercase text-[9px] tracking-[0.2em] opacity-60 mb-1">Total Net à Payer</span>
+                  <span className="font-black uppercase text-[9px] tracking-[0.2em] opacity-60 mb-1">
+                    {docType === 'expense' ? 'Total Sortie' : 'Total Net à Payer'}
+                  </span>
                   <span className="text-xl font-black">{calculateTotal().toLocaleString()} FCFA</span>
                 </div>
               </div>
@@ -681,6 +854,20 @@ export const InvoiceGenerator: React.FC = () => {
 
             {/* Signature & Digital Stamp */}
             <div className="relative flex flex-col items-center">
+              {signatureData ? (
+                <div className="mb-4">
+                  <p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest mb-1 text-center">Signature Client</p>
+                  <img src={signatureData} alt="Signature" className="h-16 w-auto object-contain border-b border-slate-100" />
+                </div>
+              ) : (
+                <div 
+                  onClick={() => setIsSignatureMode(true)}
+                  className="mb-4 p-4 border border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors print:hidden"
+                >
+                  <p className="text-[8px] font-bold text-slate-300 uppercase">Signature Client</p>
+                </div>
+              )}
+              
               {/* Digital Stamp (Cachet) - Optimized for print/PDF visibility */}
               <div className="absolute -top-12 right-0 w-40 h-40 rounded-full border-[4px] border-blue-900/40 flex items-center justify-center rotate-12 pointer-events-none z-10 print:opacity-100">
                 <div className="w-[140px] h-[140px] rounded-full border-2 border-dashed border-blue-900/30 flex flex-col items-center justify-center p-3 text-center relative bg-white/20 backdrop-blur-[1px]">
@@ -763,6 +950,57 @@ export const InvoiceGenerator: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Signature Modal */}
+      {isSignatureMode && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-deep-blue/80 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl overflow-hidden relative"
+          >
+            <button 
+              onClick={() => setIsSignatureMode(false)}
+              className="absolute top-6 right-6 p-2 text-deep-blue/20 hover:text-deep-blue transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-lime-ia/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <PenTool className="text-lime-ia" size={32} />
+              </div>
+              <h2 className="text-2xl font-black text-deep-blue">Signature Électronique</h2>
+              <p className="text-sm text-deep-blue/40 mt-2">Signez directement sur l'écran pour certifier le document.</p>
+            </div>
+
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-4 mb-8">
+              <SignatureCanvas 
+                ref={sigPad}
+                penColor="#001529"
+                canvasProps={{
+                  className: "w-full h-64 cursor-crosshair rounded-xl",
+                  id: "signature-canvas"
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={clearSignature}
+                className="btn-secondary py-3"
+              >
+                Effacer
+              </button>
+              <button 
+                onClick={saveSignature}
+                className="btn-primary py-3"
+              >
+                Valider & Fermer
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

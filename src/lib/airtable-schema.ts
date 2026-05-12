@@ -66,3 +66,13 @@ export interface CRMContact {
   phone?: string;
   lastContactDate?: string;
 }
+
+export interface Expense {
+  id: string;
+  expenseNumber: string;
+  category: string;
+  description: string;
+  amount: number;
+  date: string;
+  status: 'draft' | 'paid' | 'pending';
+}

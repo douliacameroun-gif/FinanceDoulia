@@ -41,6 +41,23 @@ export const AICatalog: React.FC = () => {
     { label: 'Autres', value: 5 },
   ]);
 
+  const updateServicePrice = async (id: string, name: string, currentPrice: number) => {
+    const newPrice = prompt(`Nouveau prix pour "${name}" (FCFA) :`, currentPrice.toString());
+    if (newPrice && !isNaN(parseInt(newPrice))) {
+      const priceVal = parseInt(newPrice);
+      const success = await airtableService.updateService(id, {
+        [AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE]: priceVal
+      });
+      
+      if (success) {
+        setServices(services.map(s => s.id === id ? { ...s, [AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE]: priceVal } : s));
+        toast.success(`Le prix de "${name}" a été mis à jour !`);
+      } else {
+        toast.error("Échec de la mise à jour sur Airtable.");
+      }
+    }
+  };
+
   const handleEditAllocation = (index: number) => {
     const item = allocation[index];
     const newValue = prompt(`Nouvelle valeur pour ${item.label} (%) :`, item.value.toString());
@@ -94,7 +111,16 @@ export const AICatalog: React.FC = () => {
               
               <div className="pt-6 border-t border-deep-blue/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] uppercase font-bold text-deep-blue/40">À partir de</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[9px] uppercase font-bold text-deep-blue/40">À partir de</p>
+                    <button 
+                      onClick={() => updateServicePrice(sol.id, sol[AIRTABLE_CONFIG.FIELDS.SERVICES.NAME], sol[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0)}
+                      className="p-1 hover:bg-lime-ia/10 rounded text-lime-ia transition-colors"
+                      title="Modifier le prix dans le catalogue"
+                    >
+                      <Edit2 size={10} />
+                    </button>
+                  </div>
                   <p className="text-lg font-bold text-lime-ia">{(sol[AIRTABLE_CONFIG.FIELDS.SERVICES.SETUP_PRICE] as number || 0).toLocaleString()} XAF</p>
                 </div>
                 <button 

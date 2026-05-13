@@ -791,7 +791,7 @@ export const InvoiceGenerator: React.FC = () => {
           </div>
 
           {/* Totals */}
-          <div className="mt-8 flex justify-end">
+          <div className="mt-4 flex justify-end">
             <div className="w-72 space-y-3">
               <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                 <span>Sous-total HT</span>
@@ -835,7 +835,7 @@ export const InvoiceGenerator: React.FC = () => {
           </div>
 
           {/* Validation Section */}
-          <div className="mt-16 grid grid-cols-2 gap-8 items-end relative">
+          <div className="mt-10 grid grid-cols-2 gap-8 items-end relative">
             {/* QR Code Security */}
             <div className="flex flex-col items-start gap-2">
               <div className="p-2 bg-white border border-slate-100 rounded-lg shadow-sm">
@@ -856,7 +856,9 @@ export const InvoiceGenerator: React.FC = () => {
             <div className="relative flex flex-col items-center">
               {signatureData ? (
                 <div className="mb-4">
-                  <p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest mb-1 text-center">Signature Client</p>
+                  <p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest mb-1 text-center">
+                    {docType === 'expense' ? 'Signature du Bénéficiaire' : 'Signature Client'}
+                  </p>
                   <img src={signatureData} alt="Signature" className="h-16 w-auto object-contain border-b border-slate-100" />
                 </div>
               ) : (
@@ -864,7 +866,9 @@ export const InvoiceGenerator: React.FC = () => {
                   onClick={() => setIsSignatureMode(true)}
                   className="mb-4 p-4 border border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors print:hidden"
                 >
-                  <p className="text-[8px] font-bold text-slate-300 uppercase">Signature Client</p>
+                  <p className="text-[8px] font-bold text-slate-300 uppercase">
+                    {docType === 'expense' ? 'Signature du Bénéficiaire' : 'Signature Client'}
+                  </p>
                 </div>
               )}
               
@@ -917,10 +921,7 @@ export const InvoiceGenerator: React.FC = () => {
           </div>
 
           {/* Footer */}
-          <div className="mt-auto pt-6 border-t border-slate-100">
-            <p className="text-[10px] font-bold text-deep-blue text-center mb-3 italic">
-              "L'IA n'est pas un coût, c'est un investissement dont le ROI est visible dès le premier mois."
-            </p>
+          <div className="mt-auto pt-4 border-t border-slate-100">
             <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[9px] font-bold text-slate-500">
               <div className="flex items-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-lime-ia" />
@@ -936,15 +937,7 @@ export const InvoiceGenerator: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-lime-ia" />
-                <span>Merci pour votre confiance.</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1 h-1 rounded-full bg-lime-ia" />
-                <span>Généré par Doulia Finance Hub</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1 h-1 rounded-full bg-lime-ia" />
-                <span className="uppercase">DOULIA - RC/DLA/2024/B/1234</span>
+                <span className="uppercase">DOULIA - NIU : P018917743182Q - RC/DLA/2025/B/1234</span>
               </div>
             </div>
           </div>

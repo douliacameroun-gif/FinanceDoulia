@@ -5,7 +5,7 @@
 export const AIRTABLE_CONFIG = {
   BASE_ID: 'appK4PC79CjakwBo8',
   TABLES: {
-    INVOICES: 'tblX7ykfY4DwtMwx3',
+    INVOICES: 'tblFupyayeHLl7Ubg', // Correct table ID for Factures
     CLIENTS: 'tblH7L934XOqS31dc',
     BUDGETS: 'tblLu4T3lvaXAoZfi',
     PROJECTS: 'Projets', 
@@ -14,7 +14,8 @@ export const AIRTABLE_CONFIG = {
     TASKS: 'Task_Manager',
     VEILLE: 'Veille_Stratégique',
     CHAT_LOGS: 'Chat_Logs',
-    EXPENSES: 'tblExpensesDoulia', // New table for tracking expenses docs
+    EXPENSES: 'tblExpensesDoulia', // Table for tracking expenses
+    AI_OPTIMIZATIONS: 'Optimisations IA', // Table for AI Recommendations
   },
   FIELDS: {
     EXPENSES: {
@@ -24,16 +25,18 @@ export const AIRTABLE_CONFIG = {
       DATE: 'fldExpDate',
       CATEGORY: 'fldExpCategory',
       STATUS: 'fldExpStatus',
+      TYPE: 'Type de Dépense',
+      ATTACHMENT: 'Fichier Joint Dépense',
     },
     CLIENTS: {
-      NAME: 'fldn2cShZ3MzzI2lc',
-      CONTACT: 'fldaimzKu1Hnkj73D',
-      EMAIL: 'fld2nx5p6cYtwvnf0',
-      SECTOR: 'fldt3wE2wbhaT7US6',
-      STATUS: 'fld7GQBiEFw3WfFyL',
-      AI_SCORE: 'fld4hnVSICC0fAMbX',
-      SENTIMENT: 'fldAgNkrk6jwEkkdo',
-      TOTAL_VALUE: 'fldCH8LcedPBvS14Q',
+      NAME: 'Nom',
+      CONTACT: 'Contact',
+      EMAIL: 'Email',
+      SECTOR: 'Secteur',
+      STATUS: 'Statut',
+      AI_SCORE: 'Score IA',
+      SENTIMENT: 'Sentiment',
+      TOTAL_VALUE: 'Valeur Totale',
     },
     TASKS: {
       TITLE: 'Task_Name',
@@ -64,10 +67,6 @@ export const AIRTABLE_CONFIG = {
       TYPE: 'Type',
       BUDGET: 'Budget',
       PROGRESS: 'Progrès IA (%)',
-      INVOICES: 'Factures',
-      CHAT_LOGS: 'Chat_Logs',
-      TASKS: 'Task_Manager',
-      VEILLE: 'Veille_Stratégique',
     },
     CHAT_LOGS: {
       SESSION_ID: 'Session_ID',
@@ -85,18 +84,30 @@ export const AIRTABLE_CONFIG = {
       MAINTENANCE_PRICE: 'fld3hQvyMrHF4Kbox',
     },
     BUDGETS: {
-      MONTH: 'fldIFImUYwtM9uKAc',
-      TOTAL_REVENUE: 'fldwgHL7o3iqsKd3u',
-      TOTAL_EXPENSES: 'fldtRAxE0LdMCZCzJ',
-      NET_MARGIN: 'fldxCqNFsG8nqg6k6',
+      PERIOD: 'Mois/Année',
+      TOTAL_REVENUE: 'Revenus Totaux',
+      TOTAL_EXPENSES: 'Dépenses Totales',
+      NET_MARGIN: 'Marge Nette 2',
+      TOTAL_INFLOW_LOCAL: 'Total Entrants Local',
+      TRENDS: 'Tendance Revenus',
+      REPORT_FILE: 'Fichier Rapport Mensuel',
     },
     INVOICES: {
-      ID: 'fld4xZH4q6fzCbytr',
-      CLIENT: 'fldyErgUvg9AYkUNn',
-      EMISSION_DATE: 'fldgRgKeG2tR1Ap67',
-      DUE_DATE: 'fldgsD0aCGfwMGQRl',
-      TOTAL_AMOUNT: 'fld0VEXg1rUNBzg1L',
-      STATUS: 'fldleYK02VHJUNt3Y',
+      ID: 'ID Facture',
+      CLIENT: 'Client',
+      EMISSION_DATE: 'Date Émission',
+      DUE_DATE: 'Date Échéance',
+      TOTAL_AMOUNT: 'Montant Total',
+      STATUS: 'Statut',
+      DOC_TYPE: 'Type de Document',
+      ATTACHMENTS: 'Fichiers Joints',
+      SIGNATURE: 'Signature Électronique',
+    },
+    AI_OPTIMIZATIONS: {
+      RECOMMENDATION: 'Texte Recommandation',
+      ROI: 'ROI Estimé',
+      STATUS: 'Statut Application',
+      CREATED_TIME: 'Date Génération',
     },
     SOCIAL_POSTS: {
       CONTENT: 'fldWfOYnsvIBIIXba',

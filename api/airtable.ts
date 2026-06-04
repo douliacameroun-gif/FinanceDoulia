@@ -10,6 +10,7 @@ app.use(express.json());
 // Airtable Proxy Routes
 app.get("/api/airtable/:tableId", async (req, res) => {
   const { tableId } = req.params;
+  const { byName } = req.query;
   const apiKey = process.env.PAT_AIRTABLE;
   const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
 
@@ -20,11 +21,11 @@ app.get("/api/airtable/:tableId", async (req, res) => {
   try {
     const base = new Airtable({ apiKey }).base(baseId);
     
-    // Only use field IDs if the table ID looks like a real 17-char Airtable ID
-    const isRealDataTableId = tableId.startsWith('tbl') && tableId.length === 17;
+    // Only use field IDs if byName is not true and table ID looks like a real 17-char Airtable ID
+    const useFieldId = byName === "true" ? false : (tableId.startsWith('tbl') && tableId.length === 17);
     
     const records = await base(tableId).select({
-      returnFieldsByFieldId: isRealDataTableId
+      returnFieldsByFieldId: useFieldId
     }).all();
 
     const data = records.map((record) => ({

@@ -3,10 +3,10 @@ import { AIRTABLE_CONFIG } from './schema';
 /**
  * Generic function to fetch records from an Airtable table via server proxy
  */
-export async function fetchAirtableData<T>(tableId: string): Promise<T[]> {
+export async function fetchAirtableData<T>(tableId: string, byName?: boolean): Promise<T[]> {
   try {
     console.log(`Fetching data from proxy for table: ${tableId}...`);
-    const response = await fetch(`/api/airtable/${tableId}`);
+    const response = await fetch(`/api/airtable/${tableId}${byName ? '?byName=true' : ''}`);
     
     if (!response.ok) {
       const errorData = await response.json();
@@ -76,15 +76,17 @@ export async function deleteAirtableRecord(tableId: string, recordId: string): P
   }
 }
 export const airtableService = {
-  getClients: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.CLIENTS),
+  getClients: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.CLIENTS, true),
   getProjects: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.PROJECTS),
-  getInvoices: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.INVOICES),
-  getBudgets: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.BUDGETS),
+  getInvoices: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.INVOICES, true),
+  getBudgets: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.BUDGETS, true),
+  getExpenses: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.EXPENSES),
   getServices: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SERVICES),
   getSocialPosts: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.SOCIAL_POSTS),
   getTasks: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.TASKS),
   getChatLogs: (projectId?: string) => fetchAirtableData(AIRTABLE_CONFIG.TABLES.CHAT_LOGS),
   getVeille: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.VEILLE),
+  getAIOptimizations: () => fetchAirtableData(AIRTABLE_CONFIG.TABLES.AI_OPTIMIZATIONS, true),
   
   createChatLog: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.CHAT_LOGS, fields),
   createTask: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.TASKS, fields),
@@ -94,6 +96,7 @@ export const airtableService = {
   updateInvoice: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.INVOICES, id, fields),
   updateTask: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.TASKS, id, fields),
   updateVeille: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.VEILLE, id, fields),
+  updateAIOptimization: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.AI_OPTIMIZATIONS, id, fields),
   
   createProject: (fields: any) => createAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, fields),
   updateProject: (id: string, fields: any) => updateAirtableRecord(AIRTABLE_CONFIG.TABLES.PROJECTS, id, fields),

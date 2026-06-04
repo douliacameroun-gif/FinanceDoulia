@@ -835,46 +835,42 @@ export const InvoiceGenerator: React.FC = () => {
           </div>
 
           {/* Validation Section */}
-          <div className="mt-10 grid grid-cols-2 gap-8 items-end relative">
-            {/* QR Code Security */}
-            <div className="flex flex-col items-start gap-2">
-              <div className="p-2 bg-white border border-slate-100 rounded-lg shadow-sm">
-                <QRCodeSVG 
-                  value="https://douliacameroun-825a6.web.app/"
-                  size={64}
-                  level="H"
-                  includeMargin={false}
-                />
+          <div className="mt-10 grid grid-cols-2 gap-8 items-end relative min-h-[160px]">
+            {/* Left: Client or Beneficiary Signature Block */}
+            <div className="flex flex-col items-center justify-center border-r border-slate-100 pr-4">
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-6 tracking-widest text-center">
+                {docType === 'expense' ? 'Le Bénéficiaire' : 'Le Client (Bon pour accord)'}
+              </p>
+              
+              <div className="relative">
+                {signatureData ? (
+                  <div className="flex flex-col items-center mb-2">
+                    <img src={signatureData} alt="Signature" className="h-16 w-auto object-contain border-b border-slate-100" />
+                  </div>
+                ) : (
+                  <>
+                    <div 
+                      onClick={() => setIsSignatureMode(true)}
+                      className="mb-2 p-4 border border-dashed border-slate-200 hover:border-lime-ia/50 rounded-xl cursor-pointer hover:bg-slate-50 transition-all text-center min-w-[180px] print:hidden"
+                    >
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest font-bold">Cliquez pour signer</p>
+                    </div>
+                    {/* Silent spacer strictly for printing when there's no signature yet */}
+                    <div className="hidden print:block h-12 w-48" />
+                  </>
+                )}
+                <div className="w-48 h-px bg-slate-200 mx-auto mt-2" />
               </div>
-              <div className="space-y-0.5">
-                <p className="text-[8px] font-black text-deep-blue uppercase tracking-tighter">Vérification d'Authenticité</p>
-                <p className="text-[7px] text-slate-400 font-medium">Scannez pour vérifier l'originalité du document</p>
-              </div>
+              <p className="text-[9px] text-slate-400 font-medium italic mt-2 text-center">
+                {docType === 'expense' ? 'Signature du Bénéficiaire' : 'Signature Client'}
+              </p>
             </div>
 
-            {/* Signature & Digital Stamp */}
-            <div className="relative flex flex-col items-center">
-              {signatureData ? (
-                <div className="mb-4">
-                  <p className="text-[7px] text-slate-400 font-bold uppercase tracking-widest mb-1 text-center">
-                    {docType === 'expense' ? 'Signature du Bénéficiaire' : 'Signature Client'}
-                  </p>
-                  <img src={signatureData} alt="Signature" className="h-16 w-auto object-contain border-b border-slate-100" />
-                </div>
-              ) : (
-                <div 
-                  onClick={() => setIsSignatureMode(true)}
-                  className="mb-4 p-4 border border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors print:hidden"
-                >
-                  <p className="text-[8px] font-bold text-slate-300 uppercase">
-                    {docType === 'expense' ? 'Signature du Bénéficiaire' : 'Signature Client'}
-                  </p>
-                </div>
-              )}
-              
+            {/* Right: Signature & Digital Stamp of DG (Le Directeur Général) */}
+            <div className="relative flex flex-col items-center justify-center pl-4">
               {/* Digital Stamp (Cachet) - Optimized for print/PDF visibility */}
-              <div className="absolute -top-12 right-0 w-40 h-40 rounded-full border-[4px] border-blue-900/40 flex items-center justify-center rotate-12 pointer-events-none z-10 print:opacity-100">
-                <div className="w-[140px] h-[140px] rounded-full border-2 border-dashed border-blue-900/30 flex flex-col items-center justify-center p-3 text-center relative bg-white/20 backdrop-blur-[1px]">
+              <div className="absolute top-0 right-0 w-36 h-36 rounded-full border-[4px] border-blue-900/40 flex items-center justify-center rotate-12 pointer-events-none z-10 print:opacity-100">
+                <div className="w-[125px] h-[125px] rounded-full border-2 border-dashed border-blue-900/30 flex flex-col items-center justify-center p-2 text-center relative bg-white/20 backdrop-blur-[1px]">
                   {/* Circular Text (Simulated) */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-full h-full rounded-full border border-dashed border-blue-900/10 animate-[spin_20s_linear_infinite]" />
@@ -883,45 +879,41 @@ export const InvoiceGenerator: React.FC = () => {
                   <img 
                     src="https://i.postimg.cc/Y0nJdHW3/DOULIA_LOGO.jpg" 
                     alt="Stamp Logo" 
-                    className="w-12 h-12 object-cover rounded-full mb-1.5 opacity-60 grayscale contrast-125"
+                    className="w-10 h-10 object-cover rounded-full mb-1 opacity-60 grayscale contrast-125"
                     referrerPolicy="no-referrer"
                   />
-                  <p className="text-[9px] font-black text-blue-900/70 uppercase tracking-widest leading-none">DOULIA</p>
-                  <div className="h-px w-10 bg-blue-900/30 my-1" />
-                  <p className="text-[8px] font-bold text-blue-900/60 uppercase leading-tight">
-                    Direction Générale<br/>Douala - Cameroun
+                  <p className="text-[8px] font-black text-blue-900/70 uppercase tracking-widest leading-none">DOULIA</p>
+                  <div className="h-px w-8 bg-blue-900/30 my-0.5" />
+                  <p className="text-[7px] font-bold text-blue-900/60 uppercase leading-tight">
+                    Direction Général<br/>Douala - Cameroun
                   </p>
-                  <p className="text-[6px] font-bold text-blue-900/40 mt-1 uppercase tracking-tighter">Approuvé le {new Date().toLocaleDateString()}</p>
+                  <p className="text-[5px] font-bold text-blue-900/40 mt-0.5 uppercase tracking-tighter">Approuvé le {new Date().toLocaleDateString()}</p>
                 </div>
               </div>
 
               {/* Signature Area */}
-              <div className="text-center z-10">
+              <div className="text-center z-10 mt-2">
                 <p className="text-[10px] font-bold uppercase text-slate-400 mb-6 tracking-widest">Le Directeur Général</p>
-                <div className="relative inline-block">
-                  <p className="font-handwriting text-5xl text-blue-900/90 -rotate-2 mb-2 select-none filter drop-shadow-[0.5px_0.5px_0px_rgba(30,58,138,0.3)] tracking-tight skew-x-[-2deg]">
-                    Marc Bagnack
-                  </p>
-                  {/* Signature Flourish - Complex Path */}
-                  <svg className="absolute -bottom-6 -left-8 w-64 h-16 text-blue-900/20 pointer-events-none" viewBox="0 0 200 60">
+                <div className="relative inline-block min-h-[44px]">
+                  {/* Beautiful visual signature flourish SVG without explicit text */}
+                  <svg className="w-48 h-12 text-blue-900/50 pointer-events-none mx-auto" viewBox="0 0 200 60">
                     <path 
-                      d="M10,40 Q40,10 80,40 T150,30 Q180,20 195,50 M15,45 Q60,35 120,45" 
+                      d="M15,40 C45,15 75,45 115,20 C145,10 165,35 185,15 M20,45 C50,25 90,30 140,35 Q170,30 190,40" 
                       fill="none" 
                       stroke="currentColor" 
-                      strokeWidth="1.2" 
+                      strokeWidth="1.6" 
                       strokeLinecap="round"
-                      className="opacity-30"
                     />
                   </svg>
                   <div className="w-48 h-px bg-slate-200 mx-auto mt-2" />
                 </div>
-                <p className="text-[11px] font-black text-deep-blue mt-4 tracking-tight">Marc Bagnack</p>
+                <p className="text-[9px] text-slate-400 font-medium italic mt-2">Signature & Cachet autorisés</p>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="mt-auto pt-4 border-t border-slate-100">
+          <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col items-center gap-4">
             <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[9px] font-bold text-slate-500">
               <div className="flex items-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-lime-ia" />
@@ -938,6 +930,22 @@ export const InvoiceGenerator: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <div className="w-1 h-1 rounded-full bg-lime-ia" />
                 <span className="uppercase">DOULIA - NIU : P018917743182Q - RC/DLA/2025/B/1234</span>
+              </div>
+            </div>
+
+            {/* QR Code Security (Moved after official company coordinates) */}
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 max-w-sm mt-1">
+              <div className="p-1 bg-white border border-slate-100 rounded-lg shadow-sm shrink-0">
+                <QRCodeSVG 
+                  value="https://www.doulia.cm"
+                  size={42}
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+              <div className="space-y-0.5 text-left">
+                <p className="text-[8px] font-black text-deep-blue uppercase tracking-wider leading-none">Vérification d'Authenticité</p>
+                <p className="text-[7px] text-slate-400 font-medium leading-tight">Scannez ce QR code pour vérifier l'authenticité de vos documents sur www.doulia.cm</p>
               </div>
             </div>
           </div>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { airtableService } from '../lib/airtable';
 import { AIRTABLE_CONFIG } from '../lib/schema';
+import { AIDraftWorkspace } from './AIDraftWorkspace';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 
@@ -32,6 +33,7 @@ interface Task {
 export const Tasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [draftWorkspaceTask, setDraftWorkspaceTask] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [selectedProjectId, setSelectedProjectId] = useState('all');
@@ -468,9 +470,23 @@ export const Tasks: React.FC = () => {
                       </button>
                     </td>
                     <td className="px-6 py-4 text-right print:hidden">
-                      <button className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors">
-                        <MoreVertical size={16} />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => setDraftWorkspaceTask(task)}
+                          className="p-2 bg-lime-ia/5 hover:bg-lime-ia/20 rounded-lg text-lime-ia hover:scale-105 transition-all flex items-center gap-1"
+                          title="Brouillon & Conception IA"
+                        >
+                          <Sparkles size={14} className="animate-pulse text-lime-ia" />
+                          <span className="text-[10px] font-black uppercase text-lime-ia">Brouillon IA</span>
+                        </button>
+                        <button 
+                          onClick={() => toggleStatus(task.id, task[AIRTABLE_CONFIG.FIELDS.TASKS.STATUS])}
+                          className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors"
+                          title="Changer Statut"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -485,6 +501,36 @@ export const Tasks: React.FC = () => {
         <p className="text-[10px] font-black uppercase tracking-[0.3em]">Doulia Priority Algorithm v2.4</p>
         <p className="text-[8px] font-medium">Calculé dynamiquement selon le ROI projet et l'urgence temporelle.</p>
       </div>
+
+      {/* AI Draft Workspace for Tasks */}
+      {draftWorkspaceTask && (
+        <AIDraftWorkspace
+          isOpen={!!draftWorkspaceTask}
+          onClose={() => setDraftWorkspaceTask(null)}
+          type="task"
+          itemId={draftWorkspaceTask.id}
+          itemTitle={draftWorkspaceTask[AIRTABLE_CONFIG.FIELDS.TASKS.TITLE] || 'Tâche sans nom'}
+          initialDescription={draftWorkspaceTask[AIRTABLE_CONFIG.FIELDS.TASKS.DESCRIPTION] || ''}
+          onSave={async (updatedText) => {
+            try {
+              // Update local state instantly
+              setTasks(prev => prev.map(t => {
+                if (t.id === draftWorkspaceTask.id) {
+                  return { ...t, [AIRTABLE_CONFIG.FIELDS.TASKS.DESCRIPTION]: updatedText };
+                }
+                return t;
+              }));
+
+              // Sync to Airtable
+              await airtableService.updateTask(draftWorkspaceTask.id, {
+                [AIRTABLE_CONFIG.FIELDS.TASKS.DESCRIPTION]: updatedText
+              });
+            } catch (error) {
+              console.error("Airtable task description sync error (non-blocking):", error);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

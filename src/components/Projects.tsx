@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 
 import { AIRTABLE_CONFIG } from '../lib/schema';
 import { airtableService } from '../lib/airtable';
+import { AIDraftWorkspace } from './AIDraftWorkspace';
 
 const StatusBadge = ({ status }: { status: string }) => {
   switch (status) {
@@ -22,6 +23,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 export const Projects: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'list' | 'resources'>('list');
   const [projects, setProjects] = React.useState<any[]>([]);
+  const [draftWorkspaceProject, setDraftWorkspaceProject] = React.useState<any | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedProject, setSelectedProject] = React.useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
@@ -537,6 +539,14 @@ export const Projects: React.FC = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 
+                        onClick={() => setDraftWorkspaceProject(project)}
+                        className="p-2 bg-lime-ia/5 hover:bg-lime-ia/20 rounded-lg text-lime-ia hover:scale-105 transition-all flex items-center gap-1"
+                        title="Brouillon & Conception IA"
+                      >
+                        <Sparkles size={14} className="animate-pulse text-lime-ia" />
+                        <span className="text-[10px] font-black uppercase text-lime-ia">Brouillon IA</span>
+                      </button>
+                      <button 
                         onClick={() => handleEditProject(project)}
                         className="p-2 hover:bg-deep-blue/5 rounded-lg text-deep-blue/20 hover:text-deep-blue transition-colors"
                         title="Modifier"
@@ -638,6 +648,36 @@ export const Projects: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reusable Intelligent Draft & Design Workspace Modal */}
+      {draftWorkspaceProject && (
+        <AIDraftWorkspace
+          isOpen={!!draftWorkspaceProject}
+          onClose={() => setDraftWorkspaceProject(null)}
+          type="project"
+          itemId={draftWorkspaceProject.id}
+          itemTitle={draftWorkspaceProject[AIRTABLE_CONFIG.FIELDS.PROJECTS.NAME] || 'Projet sans nom'}
+          initialDescription={draftWorkspaceProject.description || ''}
+          onSave={async (updatedText) => {
+            try {
+              // Update local state instantly
+              setProjects(prev => prev.map(p => {
+                if (p.id === draftWorkspaceProject.id) {
+                  return { ...p, description: updatedText };
+                }
+                return p;
+              }));
+              
+              // Try updating description back to Airtable, syncing changes
+              await airtableService.updateProject(draftWorkspaceProject.id, {
+                'Description': updatedText
+              });
+            } catch (error) {
+              console.error("Non-blocking Airtable sync error:", error);
+            }
+          }}
+        />
       )}
     </div>
   );

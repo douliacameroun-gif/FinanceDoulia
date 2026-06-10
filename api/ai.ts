@@ -5,7 +5,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
-const router = express.Router();
+const app = express();
+app.use(express.json());
+
 const tavilyKey = process.env.TAVILY_KEY;
 const airtableKey = process.env.PAT_AIRTABLE;
 const baseId = process.env.BASE_ID_AIRTABLE || 'appK4PC79CjakwBo8';
@@ -21,7 +23,7 @@ const ai = new GoogleGenAI({
 });
 
 // Route to check API health
-router.get("/health", (req, res) => {
+app.get("/api/ai/health", (req, res) => {
   res.json({
     gemini: !!process.env.GEMINI_API_KEY,
     tavily: !!process.env.TAVILY_KEY,
@@ -30,7 +32,7 @@ router.get("/health", (req, res) => {
 });
 
 // Route for AI Research (Tavily only, synthesis in frontend)
-router.post("/research", async (req, res) => {
+app.post("/api/ai/research", async (req, res) => {
   const { query } = req.body;
   if (!tavilyKey) return res.status(500).json({ error: "Tavily API key missing" });
 
@@ -55,7 +57,7 @@ router.post("/research", async (req, res) => {
 });
 
 // Route for deep market intelligence using Tavily as web search & Gemini for synthesis
-router.post("/veille-intelligence", async (req, res) => {
+app.post("/api/ai/veille-intelligence", async (req, res) => {
   const { sector, keywords } = req.body;
   if (!tavilyKey) return res.status(500).json({ error: "Clé API Tavily absente du serveur. Veuillez l'ajouter dans Settings > Secrets sous TAVILY_KEY." });
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: "Clé API Gemini absente de Doulia." });
@@ -156,7 +158,7 @@ router.post("/veille-intelligence", async (req, res) => {
 });
 
 // Route to create a project from a veille idea
-router.post("/create-project-from-veille", async (req, res) => {
+app.post("/api/ai/create-project-from-veille", async (req, res) => {
   const { title, description, budget } = req.body;
   if (!airtableKey) return res.status(500).json({ error: "Airtable API key missing" });
 
@@ -181,7 +183,7 @@ router.post("/create-project-from-veille", async (req, res) => {
 });
 
 // Route for AI Draft Design and Assist Workspace
-router.post("/draft-assistant", async (req, res) => {
+app.post("/api/ai/draft-assistant", async (req, res) => {
   const { type, title, currentDraft, action, userInput } = req.body;
   if (!process.env.GEMINI_API_KEY) {
     return res.status(200).json({ 
@@ -291,7 +293,7 @@ router.post("/draft-assistant", async (req, res) => {
 });
 
 // Route for Chat IA Hub
-router.post("/chat", async (req, res) => {
+app.post("/api/ai/chat", async (req, res) => {
   const { messages, context, customInstructions } = req.body;
   if (!process.env.GEMINI_API_KEY) {
     return res.status(200).json({ 
@@ -342,4 +344,31 @@ router.post("/chat", async (req, res) => {
   }
 });
 
-export default router;
+// Generic safe server-side proxy route for AI generation
+app.post("/api/ai/generate", async (req, res) => {
+  const { prompt, systemInstruction, model } = req.body;
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(200).json({
+      success: false,
+      error: "Clé API Gemini absente de Doulia. Veuillez l'ajouter dans Settings > Secrets sous GEMINI_API_KEY."
+    });
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model || "gemini-3.5-flash",
+      contents: prompt,
+      config: systemInstruction ? { systemInstruction } : undefined
+    });
+
+    res.json({
+      success: true,
+      text: response.text || ""
+    });
+  } catch (error: any) {
+    console.error("Error in generic generate API:", error);
+    res.status(500).json({ error: error.message || "Erreur lors de la génération avec Gemini." });
+  }
+});
+
+export default app;

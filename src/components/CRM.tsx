@@ -8,8 +8,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
-import { GoogleGenAI } from '@google/genai';
-
 import { AIRTABLE_CONFIG } from '../lib/schema';
 import { airtableService } from '../lib/airtable';
 
@@ -199,8 +197,6 @@ export const CRM: React.FC = () => {
     if (!brief.trim()) return;
     setIsGenerating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.DOULIA_GEMINI_KEY || process.env.GEMINI_API_KEY || '' });
-      
       const prompt = `Tu es un expert en marketing digital pour le marché camerounais. 
       Rédige un post de réseau social percutant basé sur ce brief : "${brief}".
       Le ton doit être professionnel, innovant et engageant. 
@@ -211,12 +207,21 @@ export const CRM: React.FC = () => {
       2. FORMATAGE : Utilise le gras (**) pour les mots-clés et les titres. NE JAMAIS UTILISER DE BALISES HTML OU D'ASTÉRISQUES (*) POUR LES LISTES (utilise des chiffres ou des tirets).
       3. LANGUE : Français uniquement.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
+      const proxyResponse = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: [{ role: 'user', parts: [{ text: prompt }] }],
+          model: "gemini-3.5-flash"
+        })
       });
-      
-      setGeneratedContent(response.text || "Désolé, aucune réponse n'a été générée.");
+
+      if (!proxyResponse.ok) {
+        throw new Error("Impossible de se connecter au cerveau marketing de Doulia.");
+      }
+
+      const proxyData = await proxyResponse.json();
+      setGeneratedContent(proxyData.text || "Désolé, aucune réponse n'a été générée.");
     } catch (error) {
       console.error("Error generating content:", error);
       setGeneratedContent("Désolé, une erreur est survenue lors de la génération du contenu.");
@@ -321,26 +326,28 @@ export const CRM: React.FC = () => {
     
     try {
       const query = "actualités marché IA Cameroun Afrique monde concurrents Doulia Finance Hub opportunités";
-      const response = await fetch('https://api.tavily.com/search', {
+      const response = await fetch("/api/ai/research", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: process.env.TAVILY_KEY,
-          query: query,
-          search_depth: "advanced",
-          include_answer: true,
-          max_results: 5
-        })
+        body: JSON.stringify({ query })
       });
 
       if (!response.ok) throw new Error("Erreur Tavily API");
       const data = await response.json();
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const processedResults = await Promise.all((data.results || []).map(async (res: any) => {
         const prompt = `Analyse cet article pour DOULIA. ARTICLE: ${res.title} - ${res.content}. FOURNIS : 1. UN RÉSUMÉ (2 phrases) 2. OPPORTUNITÉS DOULIA (1 phrase). Gras (**) pour les mots clés.`;
-        const aiRes = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt });
-        const analysis = aiRes.text || "";
+        const aiRes = await fetch("/api/ai/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: [{ role: 'user', parts: [{ text: prompt }] }],
+            model: "gemini-3.5-flash"
+          })
+        });
+        
+        const aiData = await aiRes.json();
+        const analysis = aiData.text || "";
         const [summary, opportunities] = analysis.split('\n\n');
 
         const fields: any = {};

@@ -671,11 +671,11 @@ export const Veille: React.FC = () => {
                   <div className="flex items-center gap-2 px-1">
                     <TrendingUp size={16} className="text-lime-ia" />
                     <span className="text-xs font-black uppercase tracking-wider text-deep-blue">
-                      Opportunités Identifiées ({scanResults.opportunities.length})
+                      Opportunités Identifiées ({scanResults.opportunities?.length || 0})
                     </span>
                   </div>
 
-                  {scanResults.opportunities.map((opp, idx) => (
+                  {scanResults.opportunities?.map((opp, idx) => (
                     <div 
                       key={idx}
                       className="premium-card p-5 bg-gradient-to-r from-white to-cloud-gray/30 border border-deep-blue/5 hover:border-lime-ia/40 transition-all flex flex-col justify-between gap-4"
@@ -686,7 +686,7 @@ export const Veille: React.FC = () => {
                             {opp.sector}
                           </span>
                           <span className={cn(
-                            "text-[8px] font-black uppercase px-2 py-0.5 rounded",
+                             "text-[8px] font-black uppercase px-2 py-0.5 rounded",
                             opp.potential === 'Critique' ? "bg-red-500/10 text-red-600" :
                             opp.potential === 'Élevé' ? "bg-orange-500/10 text-orange-600" :
                             "bg-blue-500/10 text-blue-600"
@@ -738,7 +738,7 @@ export const Veille: React.FC = () => {
                     <div className="space-y-1 z-10">
                       <p className="text-xs font-black uppercase tracking-wider text-lime-ia">Flux du Scan Actif</p>
                       <p className="text-[10px] opacity-70 font-medium">
-                        Indexation : {scanResults.searchQuery}<br/>
+                        Indexation : {scanResults.searchQuery || ""}<br/>
                         Sources traitées : {(scanResults as any).sources?.length || 0} articles camerounais
                       </p>
                     </div>

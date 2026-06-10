@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const router = express.Router();
+const app = express();
+app.use(express.json());
 
 let supabaseClient: any = null;
 
@@ -24,7 +25,7 @@ function getSupabaseClient() {
 }
 
 // GET all contacts from Supabase
-router.get("/contacts", async (req, res) => {
+app.get("/api/supabase/contacts", async (req, res) => {
   try {
     const client = getSupabaseClient();
     
@@ -101,7 +102,7 @@ WITH CHECK (true);`
 });
 
 // PATCH endpoint to update contact status in Supabase
-router.patch("/contacts/:id", async (req, res) => {
+app.patch("/api/supabase/contacts/:id", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   
@@ -125,7 +126,7 @@ router.patch("/contacts/:id", async (req, res) => {
 });
 
 // GET all messages from Supabase
-router.get("/messages", async (req, res) => {
+app.get("/api/supabase/messages", async (req, res) => {
   try {
     const client = getSupabaseClient();
     
@@ -192,7 +193,7 @@ WITH CHECK (true);`
 });
 
 // PATCH endpoint to update message status in Supabase
-router.patch("/messages/:id", async (req, res) => {
+app.patch("/api/supabase/messages/:id", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   
@@ -215,4 +216,4 @@ router.patch("/messages/:id", async (req, res) => {
   }
 });
 
-export default router;
+export default app;

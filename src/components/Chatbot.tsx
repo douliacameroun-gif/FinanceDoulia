@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, X, Minimize2, Maximize2, Sparkles, Mic, Globe } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
@@ -111,32 +110,40 @@ export const Chatbot: React.FC = () => {
       - Factures : ${JSON.stringify(mappedInvoices)}
       `;
       
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-        config: {
-          systemInstruction: `Tu es l'expert Doulia, aide à la décision sur le marché Camerounais. 
-          Personnalité : Expert-comptable, stratège commercial, et spécialiste du marché camerounais.
-          Mission : Accompagner les entreprises camerounaises dans leur transformation numérique et optimisation financière via l'IA.
-          
-          TU AS ACCÈS AUX DONNÉES RÉELLES DE L'ENTREPRISE CI-DESSOUS. ANALYSE-LES POUR RÉPONDRE PRÉCISÉMENT.
-          
-          ${businessContext}
-          
-          ${searchResults ? `Voici des informations récentes trouvées sur le web pour t'aider :\n${searchResults}` : ''}
-          
-          Directives de rendu (STRICTES) :
-          1. ANALYSE DE DONNÉES : Utilise les données Airtable fournies pour donner des chiffres précis (MRR, nombre de clients, état des projets, etc.) si la question le demande.
-          2. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
-          3. LISTES NUMÉROTÉES : Utilise des listes numérotées (1., 2., etc.) pour les étapes ou les énumérations.
-          4. OPPORTUNITÉS : À la fin de CHAQUE réponse, ajoute une section intitulée "**Opportunités Doulia**" où tu proposes des offres de services, des idées marketing ou des opportunités de marché spécifiques pour Doulia basées sur la discussion et les données.
-          5. FORMATAGE : Utilise le gras (**) pour les mots-clés et les titres. NE JAMAIS UTILISER DE BALISES HTML OU D'ASTÉRISQUES (*) POUR LES LISTES.
-          6. LANGUE : Français uniquement.`,
-        }
+      const sysInstruction = `Tu es l'expert Doulia, aide à la décision sur le marché Camerounais. 
+      Personnalité : Expert-comptable, stratège commercial, et spécialiste du marché camerounais.
+      Mission : Accompagner les entreprises camerounaises dans leur transformation numérique et optimisation financière via l'IA.
+      
+      TU AS ACCÈS AUX DONNÉES RÉELLES DE L'ENTREPRISE CI-DESSOUS. ANALYSE-LES POUR RÉPONDRE PRÉCISÉMENT.
+      
+      ${businessContext}
+      
+      ${searchResults ? `Voici des informations récentes trouvées sur le web pour t'aider :\n${searchResults}` : ''}
+      
+      Directives de rendu (STRICTES) :
+      1. ANALYSE DE DONNÉES : Utilise les données Airtable fournies pour donner des chiffres précis (MRR, nombre de clients, état des projets, etc.) si la question le demande.
+      2. SÉPARATION DES PARAGRAPHES : Utilise des doubles sauts de ligne pour bien séparer les idées.
+      3. LISTES NUMÉROTÉES : Utilise des listes numérotées (1., 2., etc.) pour les étapes ou les énumérations.
+      4. OPPORTUNITÉS : À la fin de CHAQUE réponse, ajoute une section intitulée "**Opportunités Doulia**" où tu proposes des offres de services, des idées marketing ou des opportunités de marché spécifiques pour Doulia basées sur la discussion et les données.
+      5. FORMATAGE : Utilise le gras (**) pour les mots-clés et les titres. NE JAMAIS UTILISER DE BALISES HTML OU D'ASTÉRISQUES (*) POUR LES LISTES.
+      6. LANGUE : Français uniquement.`;
+
+      const proxyResponse = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: [{ role: 'user', parts: [{ text: userMessage }] }],
+          systemInstruction: sysInstruction,
+          model: "gemini-3.5-flash"
+        })
       });
 
-      const botResponse = response.text || "Désolé, je n'ai pas pu traiter votre demande.";
+      if (!proxyResponse.ok) {
+        throw new Error("Impossible de communiquer avec le cerveau de Doulia.");
+      }
+
+      const proxyData = await proxyResponse.json();
+      const botResponse = proxyData.text || "Désolé, je n'ai pas pu traiter votre demande.";
       setMessages(prev => [...prev, { role: 'bot', content: botResponse }]);
     } catch (error) {
       console.error('Gemini Error:', error);

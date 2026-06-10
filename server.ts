@@ -9,10 +9,10 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Use the airtable proxy app
+  // Use the proxy apps
   app.use(airtableApp);
-  app.use("/api/ai", aiRouter);
-  app.use("/api/supabase", supabaseRouter);
+  app.use(aiRouter);
+  app.use(supabaseRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

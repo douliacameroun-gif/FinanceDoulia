@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Briefcase, MoreHorizontal, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, Timer, BarChart4, Zap, Plus, Sparkles, FileText, DollarSign, BrainCircuit, Loader2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
-import { GoogleGenAI } from '@google/genai';
-
 import { AIRTABLE_CONFIG } from '../lib/schema';
 import { airtableService } from '../lib/airtable';
 import { AIDraftWorkspace } from './AIDraftWorkspace';
@@ -72,7 +70,6 @@ export const Projects: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       const prompt = `En tant qu'expert Doulia Finance Hub, analyse ce brief de projet et propose une documentation structurée.
       
       BRIEF DU PROJET : "${newProject.description}"
@@ -89,12 +86,21 @@ export const Projects: React.FC = () => {
       - Pas de HTML.
       - Langue : Français.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      const proxyResponse = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: [{ role: 'user', parts: [{ text: prompt }] }],
+          model: "gemini-3.5-flash"
+        })
       });
 
-      const analysis = response.text || "Erreur lors de l'analyse.";
+      if (!proxyResponse.ok) {
+        throw new Error("Impossible de joindre le service d'analyse de Doulia.");
+      }
+
+      const proxyData = await proxyResponse.json();
+      const analysis = proxyData.text || "Erreur lors de l'analyse.";
       setNewProject(prev => ({
         ...prev,
         description: prev.description + "\n\n--- DOCUMENTATION IA DOULIA ---\n\n" + analysis
